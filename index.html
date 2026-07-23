@@ -507,11 +507,12 @@
       }
     });
 
-    window.addEventListener('blur', function () {
-      if (examenIniciat && !suspes && !document.hidden) {
-        registrarAvis('Ha canviat de finestra o aplicació');
-      }
-    });
+    // Deliberadament NO escoltem window.blur: com que el Forms es mostra en
+    // un <iframe>, el focus hi entra cada cop que l'alumne toca una
+    // pregunta, i el navegador dispara blur a la finestra superior encara
+    // que l'alumne no hagi sortit de la pàgina. visibilitychange i
+    // fullscreenchange ja cobreixen canviar de pestanya/aplicació sense
+    // aquest fals positiu.
 
     window.addEventListener('pagehide', function () {
       if (examenIniciat && !suspes) {

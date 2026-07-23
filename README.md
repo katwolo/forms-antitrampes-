@@ -111,10 +111,17 @@ celdas**.
   correo) o la crea, fija el `Timestamp Inici` en el servidor (para que el
   cronómetro no se pueda alargar tocando el reloj del cliente ni
   recargando), y si ya estaba suspendido lo indica de inmediato.
-- Los eventos del navegador (salir de fullscreen, cambiar de pestaña,
-  perder el foco) llaman por `fetch` con `action: "warning"`; al llegar al
-  máximo de avisos, el backend responde `suspended: true` y el cliente
-  bloquea el examen.
+- Los eventos del navegador (salir de fullscreen, cambiar de pestaña o
+  minimizar) cuentan el aviso al instante en el cliente y lo envían al
+  backend con `action: "warning"`; al llegar al máximo, el cliente bloquea
+  el examen.
+- Deliberadamente **no** se usa `window.blur` para detectar cambio de
+  ventana/app: como el Forms se muestra en un `<iframe>`, el navegador
+  dispara `blur` en la ventana superior cada vez que el alumno toca una
+  pregunta del formulario (el foco pasa al iframe), lo que generaba avisos
+  falsos en cada toque. `visibilitychange` (cambiar de pestaña/minimizar) y
+  `fullscreenchange` (salir de pantalla completa) ya cubren esos casos sin
+  ese falso positivo.
 
 ### Nota técnica sobre CORS
 
