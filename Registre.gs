@@ -39,16 +39,17 @@ function findRowByToken_(token) {
 }
 
 /**
- * Busca l'alumne pel correu i el crea si és la primera vegada que entra.
- * El Timestamp Inici es fixa aquí, al servidor, perquè el cronòmetre del
- * client no es pugui allargar recarregant la pàgina o tocant el rellotge local.
+ * Busca l'alumne pel correu (escrit per ell mateix a la pàgina estàtica) i
+ * el crea si és la primera vegada que entra. El Timestamp Inici es fixa
+ * aquí, al servidor, perquè el cronòmetre del client no es pugui allargar
+ * recarregant la pàgina o tocant el rellotge local.
  */
-function findOrCreateStudent_(email) {
+function findOrCreateStudent_(email, nom) {
   var sheet = getRegistreSheet_();
   var row = findStudentRow_(email);
 
   if (row === -1) {
-    var name = email.split('@')[0];
+    var name = nom || email.split('@')[0];
     var token = Utilities.getUuid();
     var now = new Date();
     sheet.appendRow([name, email, 0, '', '', token, now]);

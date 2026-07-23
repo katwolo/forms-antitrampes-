@@ -36,6 +36,9 @@ function getExamConfig_() {
 
   // Cas especial de la plantilla: el valor d'aquesta etiqueta no és a la
   // columna B de la mateixa fila, sinó a la columna A de la fila següent.
+  // Ara hi va l'enllaç de GitHub Pages (el que rep l'alumnat), no l'enllaç
+  // d'aquest Apps Script — el professor l'hi enganxa manualment un cop
+  // publicada la pàgina.
   var enllacEntry = byLabel[CONFIG_LABELS.enllacAlumnat];
   if (enllacEntry) {
     var nextRowValue = sheet.getRange(enllacEntry.row + 1, 1).getValue();
@@ -47,15 +50,4 @@ function getExamConfig_() {
   config.estat = String(config.estat || '').trim().toUpperCase();
 
   return config;
-}
-
-function setStudentLink_(url) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CONFIG);
-  var values = sheet.getRange(1, 1, sheet.getLastRow(), 1).getValues();
-  for (var i = 0; i < values.length; i++) {
-    if (String(values[i][0]).trim() === CONFIG_LABELS.enllacAlumnat) {
-      sheet.getRange(i + 2, 1).setValue(url);
-      return;
-    }
-  }
 }

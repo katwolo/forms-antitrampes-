@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Examen</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+  }
+
+  .amagat { display: none !important; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 20, 20, 0.96);
+    color: #fff;
+    z-index: 1000;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  .targeta {
+    max-width: 560px;
+    text-align: center;
+  }
+
+  .targeta-avis { background: #b45309; padding: 32px; border-radius: 8px; }
+  .targeta-error { background: #7f1d1d; padding: 32px; border-radius: 8px; }
+
+  .descripcio, .normes { white-space: pre-wrap; text-align: left; }
+  .detalls { text-align: left; }
+
+  .camp {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    margin-top: 12px;
+  }
+  .camp input {
+    padding: 8px;
+    font-size: 1rem;
+    border-radius: 4px;
+    border: none;
+  }
+  #error-formulari { color: #fca5a5; min-height: 1.2em; margin-top: 8px; }
+
+  #btn-comenzar, #btn-tornar-fullscreen {
+    margin-top: 16px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #fff;
+    cursor: pointer;
+  }
+  #btn-comenzar:disabled { background: #555; cursor: not-allowed; }
+
+  #pantalla-examen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+  }
+  #barra-superior {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #111;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  #forms-frame { flex: 1; border: none; width: 100%; }
+</style>
+</head>
+<body>
+
+  <div id="pantalla-carrega" class="overlay">
+    <div class="targeta"><p>Carregant l'examen...</p></div>
+  </div>
+
+  <div id="pantalla-inici" class="overlay amagat">
+    <div class="targeta">
+      <h1 id="titol-examen"></h1>
+      <p class="descripcio" id="descripcio-examen"></p>
+      <h2>Normes</h2>
+      <p class="normes" id="normes-examen"></p>
+      <ul class="detalls">
+        <li>Temps: <span id="detall-temps"></span> minuts</li>
+        <li>Avisos permesos abans de suspendre: <span id="detall-avisos"></span></li>
+      </ul>
+
+      <form id="formulari-inici">
+        <div class="camp">
+          <label for="input-nom">Nom i cognoms</label>
+          <input type="text" id="input-nom" required>
+        </div>
+        <div class="camp">
+          <label for="input-correu">Correu</label>
+          <input type="email" id="input-correu" required>
+        </div>
+        <div id="error-formulari"></div>
+        <button type="submit" id="btn-comenzar">Comenzar examen</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="pantalla-examen" class="amagat">
+    <div id="barra-superior">
+      <span id="cronometre">--:--</span>
+      <span id="avisos-comptador">Avisos: <span id="avisos-actuals">0</span>/<span id="avisos-max-barra"></span></span>
+    </div>
+    <iframe id="forms-frame" allow="fullscreen"></iframe>
+  </div>
+
+  <div id="overlay-avis" class="overlay amagat">
+    <div class="targeta targeta-avis">
+      <h2 id="avis-titol">Avís</h2>
+      <p id="avis-missatge"></p>
+      <button id="btn-tornar-fullscreen">Tornar a pantalla completa</button>
+    </div>
+  </div>
+
+  <div id="overlay-suspes" class="overlay amagat">
+    <div class="targeta targeta-error">
+      <h1>Has estat suspès</h1>
+      <p>Has superat el nombre màxim d'avisos. Parla amb el professor/a.</p>
+    </div>
+  </div>
+
+  <div id="overlay-temps" class="overlay amagat">
+    <div class="targeta targeta-error">
+      <h1>S'ha acabat el temps</h1>
+      <p>Envia el formulari ara mateix si encara no ho has fet.</p>
+    </div>
+  </div>
+
+  <div id="overlay-error" class="overlay amagat">
+    <div class="targeta targeta-error">
+      <h1 id="error-titol">Error</h1>
+      <p id="error-missatge"></p>
+    </div>
+  </div>
+
+  <script>
+  // ⚠️ Substitueix això per la URL ".../exec" del teu desplegament d'Apps Script.
+  var API_URL = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE';
+
+  (function () {
+    var comptadorAvisos = 0;
+    var avisosMax = 0;
+    var suspes = false;
+    var examenIniciat = false;
+    var ultimAvisTimestamp = 0;
+    var DEDUP_MS = 1500;
+    var timerInterval = null;
+    var token = null;
+
+    var pantallaCarrega = document.getElementById('pantalla-carrega');
+    var pantallaInici = document.getElementById('pantalla-inici');
+    var pantallaExamen = document.getElementById('pantalla-examen');
+    var overlayAvis = document.getElementById('overlay-avis');
+    var overlaySuspes = document.getElementById('overlay-suspes');
+    var overlayTemps = document.getElementById('overlay-temps');
+    var overlayError = document.getElementById('overlay-error');
+    var avisTitol = document.getElementById('avis-titol');
+    var avisMissatge = document.getElementById('avis-missatge');
+    var avisosActuals = document.getElementById('avisos-actuals');
+    var cronometre = document.getElementById('cronometre');
+    var iframe = document.getElementById('forms-frame');
+    var errorFormulari = document.getElementById('error-formulari');
+    var btnComenzar = document.getElementById('btn-comenzar');
+
+    fetch(API_URL)
+      .then(function (res) { return res.json(); })
+      .then(function (config) {
+        if (config.estat !== 'ACTIU') {
+          mostraError("Examen no disponible", "Aquest examen no està actiu ara mateix. Parla amb el professor/a.");
+          return;
+        }
+        document.getElementById('titol-examen').textContent = config.titol;
+        document.getElementById('descripcio-examen').textContent = config.descripcio;
+        document.getElementById('normes-examen').textContent = config.normes;
+        document.getElementById('detall-temps').textContent = config.tempsMinuts;
+        document.getElementById('detall-avisos').textContent = config.avisosMax;
+        document.getElementById('avisos-max-barra').textContent = config.avisosMax;
+        document.title = config.titol || 'Examen';
+        avisosMax = config.avisosMax;
+
+        pantallaCarrega.classList.add('amagat');
+        pantallaInici.classList.remove('amagat');
+      })
+      .catch(function () {
+        mostraError('Error de connexió', "No s'ha pogut contactar amb el servidor de l'examen. Torna-ho a provar.");
+      });
+
+    document.getElementById('formulari-inici').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var nom = document.getElementById('input-nom').value.trim();
+      var correu = document.getElementById('input-correu').value.trim();
+      errorFormulari.textContent = '';
+      btnComenzar.disabled = true;
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'start', nom: nom, correu: correu })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.error) {
+            errorFormulari.textContent = data.missatge || 'No es pot començar l\'examen.';
+            btnComenzar.disabled = false;
+            return;
+          }
+          if (data.suspended) {
+            comptadorAvisos = data.avisos;
+            pantallaInici.classList.add('amagat');
+            overlaySuspes.classList.remove('amagat');
+            return;
+          }
+          token = data.token;
+          avisosMax = data.avisosMax;
+          comptadorAvisos = data.avisos;
+          comencarExamen(data);
+        })
+        .catch(function () {
+          errorFormulari.textContent = 'Error de connexió. Torna-ho a provar.';
+          btnComenzar.disabled = false;
+        });
+    });
+
+    document.getElementById('btn-tornar-fullscreen').addEventListener('click', function () {
+      demanaFullscreen();
+      ocultarAvis();
+    });
+
+    function comencarExamen(data) {
+      demanaFullscreen();
+      iframe.src = data.formsUrl + (data.formsUrl.indexOf('?') === -1 ? '?' : '&') + 'embedded=true';
+      pantallaInici.classList.add('amagat');
+      pantallaExamen.classList.remove('amagat');
+      avisosActuals.textContent = comptadorAvisos;
+      examenIniciat = true;
+      iniciarCronometre(data.timestampInici, data.tempsMinuts);
+      comprovarPantallesConnectades();
+    }
+
+    function demanaFullscreen() {
+      var el = document.documentElement;
+      var request = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if (request) request.call(el);
+    }
+
+    function estaEnFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+    }
+
+    function iniciarCronometre(timestampInici, tempsMinuts) {
+      var finMs = timestampInici + tempsMinuts * 60 * 1000;
+      timerInterval = setInterval(function () {
+        var restant = finMs - Date.now();
+        if (restant <= 0) {
+          clearInterval(timerInterval);
+          cronometre.textContent = '00:00';
+          tempsExhaurit();
+          return;
+        }
+        var min = Math.floor(restant / 60000);
+        var seg = Math.floor((restant % 60000) / 1000);
+        cronometre.textContent = (min < 10 ? '0' : '') + min + ':' + (seg < 10 ? '0' : '') + seg;
+      }, 1000);
+    }
+
+    function tempsExhaurit() {
+      if (suspes) return;
+      overlayTemps.classList.remove('amagat');
+      enviarEstat_('finish', 'timeout');
+    }
+
+    function mostraAvis(missatge) {
+      avisTitol.textContent = 'Avís ' + comptadorAvisos + '/' + avisosMax;
+      avisMissatge.textContent = missatge;
+      overlayAvis.classList.remove('amagat');
+    }
+
+    function ocultarAvis() {
+      overlayAvis.classList.add('amagat');
+    }
+
+    function mostraSuspes() {
+      suspes = true;
+      if (timerInterval) clearInterval(timerInterval);
+      overlayAvis.classList.add('amagat');
+      pantallaExamen.classList.add('amagat');
+      overlaySuspes.classList.remove('amagat');
+    }
+
+    function mostraError(titol, missatge) {
+      pantallaCarrega.classList.add('amagat');
+      pantallaInici.classList.add('amagat');
+      document.getElementById('error-titol').textContent = titol;
+      document.getElementById('error-missatge').textContent = missatge;
+      overlayError.classList.remove('amagat');
+    }
+
+    function registrarAvis(motiu) {
+      if (!examenIniciat || suspes) return;
+      var ara = Date.now();
+      if (ara - ultimAvisTimestamp < DEDUP_MS) return;
+      ultimAvisTimestamp = ara;
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'warning', token: token, reason: motiu })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.error) return;
+          comptadorAvisos = data.avisos;
+          avisosActuals.textContent = comptadorAvisos;
+          if (data.suspended) {
+            mostraSuspes();
+          } else {
+            mostraAvis(motiu);
+          }
+        })
+        .catch(function () {});
+    }
+
+    function enviarEstat_(accio, estat) {
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: accio, token: token, status: estat })
+      }).catch(function () {});
+    }
+
+    function comprovarPantallesConnectades() {
+      if (!window.getScreenDetails) return;
+      window.getScreenDetails()
+        .then(function (details) {
+          function comprova() {
+            if (details.screens.length > 1) {
+              registrarAvis("S'ha detectat una segona pantalla connectada");
+            }
+          }
+          comprova();
+          details.addEventListener('screenschange', comprova);
+        })
+        .catch(function () {
+          // L'alumne ha denegat el permís o el navegador no ho suporta: no és
+          // crític, és una senyal complementària, no la base de la detecció.
+        });
+    }
+
+    document.addEventListener('fullscreenchange', function () {
+      if (examenIniciat && !suspes && !estaEnFullscreen()) {
+        registrarAvis('Ha sortit de pantalla completa');
+      }
+    });
+    document.addEventListener('webkitfullscreenchange', function () {
+      if (examenIniciat && !suspes && !estaEnFullscreen()) {
+        registrarAvis('Ha sortit de pantalla completa');
+      }
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (examenIniciat && !suspes && document.hidden) {
+        registrarAvis('Ha canviat de pestanya o minimitzat la finestra');
+      }
+    });
+
+    window.addEventListener('blur', function () {
+      if (examenIniciat && !suspes && !document.hidden) {
+        registrarAvis('Ha canviat de finestra o aplicació');
+      }
+    });
+
+    window.addEventListener('beforeunload', function (e) {
+      if (examenIniciat && !suspes) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
