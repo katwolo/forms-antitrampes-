@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= config.titol ?></title>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+
+  <div id="pantalla-inici" class="overlay">
+    <div class="targeta">
+      <h1><?= config.titol ?></h1>
+      <p class="descripcio"><?= config.descripcio ?></p>
+      <h2>Normes</h2>
+      <p class="normes"><?= config.normes ?></p>
+      <ul class="detalls">
+        <li>Temps: <?= config.tempsMinuts ?> minuts</li>
+        <li>Avisos permesos abans de suspendre: <?= config.avisosMax ?></li>
+      </ul>
+      <button id="btn-comenzar">Comenzar examen</button>
+    </div>
+  </div>
+
+  <div id="pantalla-examen" class="amagat">
+    <div id="barra-superior">
+      <span id="cronometre">--:--</span>
+      <span id="avisos-comptador">Avisos: <span id="avisos-actuals">0</span>/<?= config.avisosMax ?></span>
+    </div>
+    <iframe id="forms-frame" allow="fullscreen"></iframe>
+  </div>
+
+  <div id="overlay-avis" class="overlay amagat">
+    <div class="targeta targeta-avis">
+      <h2 id="avis-titol">Avís</h2>
+      <p id="avis-missatge"></p>
+      <button id="btn-tornar-fullscreen">Tornar a pantalla completa</button>
+    </div>
+  </div>
+
+  <div id="overlay-suspes" class="overlay amagat">
+    <div class="targeta targeta-error">
+      <h1>Has estat suspès</h1>
+      <p>Has superat el nombre màxim d'avisos. Parla amb el professor/a.</p>
+    </div>
+  </div>
+
+  <div id="overlay-temps" class="overlay amagat">
+    <div class="targeta targeta-error">
+      <h1>S'ha acabat el temps</h1>
+      <p>Envia el formulari ara mateix si encara no ho has fet.</p>
+    </div>
+  </div>
+
+  <script>
+    var CONFIG = {
+      avisosMax: <?= config.avisosMax ?>,
+      tempsMinuts: <?= config.tempsMinuts ?>,
+      formsUrl: <?!= JSON.stringify(config.formsUrl) ?>,
+      token: <?!= JSON.stringify(student.token) ?>,
+      timestampInici: <?= student.timestampInici.getTime() ?>,
+      scriptUrl: <?!= JSON.stringify(scriptUrl) ?>
+    };
+  </script>
+  <?!= include('Scripts'); ?>
+</body>
+</html>

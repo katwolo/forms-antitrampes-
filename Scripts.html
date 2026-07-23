@@ -1,0 +1,168 @@
+<script>
+(function () {
+  var comptadorAvisos = 0;
+  var suspes = false;
+  var examenIniciat = false;
+  var ultimAvisTimestamp = 0;
+  var DEDUP_MS = 1500;
+  var timerInterval = null;
+
+  var pantallaInici = document.getElementById('pantalla-inici');
+  var pantallaExamen = document.getElementById('pantalla-examen');
+  var overlayAvis = document.getElementById('overlay-avis');
+  var overlaySuspes = document.getElementById('overlay-suspes');
+  var overlayTemps = document.getElementById('overlay-temps');
+  var avisTitol = document.getElementById('avis-titol');
+  var avisMissatge = document.getElementById('avis-missatge');
+  var avisosActuals = document.getElementById('avisos-actuals');
+  var cronometre = document.getElementById('cronometre');
+  var iframe = document.getElementById('forms-frame');
+
+  document.getElementById('btn-comenzar').addEventListener('click', comencarExamen);
+  document.getElementById('btn-tornar-fullscreen').addEventListener('click', function () {
+    demanaFullscreen();
+    ocultarAvis();
+  });
+
+  function comencarExamen() {
+    demanaFullscreen();
+    iframe.src = CONFIG.formsUrl + (CONFIG.formsUrl.indexOf('?') === -1 ? '?' : '&') + 'embedded=true';
+    pantallaInici.classList.add('amagat');
+    pantallaExamen.classList.remove('amagat');
+    examenIniciat = true;
+    iniciarCronometre();
+    comprovarPantallesConnectades();
+  }
+
+  function demanaFullscreen() {
+    var el = document.documentElement;
+    var request = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (request) request.call(el);
+  }
+
+  function estaEnFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+  }
+
+  function iniciarCronometre() {
+    var finMs = CONFIG.timestampInici + CONFIG.tempsMinuts * 60 * 1000;
+    timerInterval = setInterval(function () {
+      var restant = finMs - Date.now();
+      if (restant <= 0) {
+        clearInterval(timerInterval);
+        cronometre.textContent = '00:00';
+        tempsExhaurit();
+        return;
+      }
+      var min = Math.floor(restant / 60000);
+      var seg = Math.floor((restant % 60000) / 1000);
+      cronometre.textContent = (min < 10 ? '0' : '') + min + ':' + (seg < 10 ? '0' : '') + seg;
+    }, 1000);
+  }
+
+  function tempsExhaurit() {
+    if (suspes) return;
+    overlayTemps.classList.remove('amagat');
+    enviarEstat_('finish', 'timeout');
+  }
+
+  function mostraAvis(missatge) {
+    avisTitol.textContent = 'Avís ' + comptadorAvisos + '/' + CONFIG.avisosMax;
+    avisMissatge.textContent = missatge;
+    overlayAvis.classList.remove('amagat');
+  }
+
+  function ocultarAvis() {
+    overlayAvis.classList.add('amagat');
+  }
+
+  function mostraSuspes() {
+    suspes = true;
+    if (timerInterval) clearInterval(timerInterval);
+    overlayAvis.classList.add('amagat');
+    pantallaExamen.classList.add('amagat');
+    overlaySuspes.classList.remove('amagat');
+  }
+
+  function registrarAvis(motiu) {
+    if (!examenIniciat || suspes) return;
+    var ara = Date.now();
+    if (ara - ultimAvisTimestamp < DEDUP_MS) return;
+    ultimAvisTimestamp = ara;
+
+    fetch(CONFIG.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'warning', token: CONFIG.token, reason: motiu })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.error) return;
+        comptadorAvisos = data.avisos;
+        avisosActuals.textContent = comptadorAvisos;
+        if (data.suspended) {
+          mostraSuspes();
+        } else {
+          mostraAvis(motiu);
+        }
+      })
+      .catch(function () {});
+  }
+
+  function enviarEstat_(accio, estat) {
+    fetch(CONFIG.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: accio, token: CONFIG.token, status: estat })
+    }).catch(function () {});
+  }
+
+  function comprovarPantallesConnectades() {
+    if (!window.getScreenDetails) return;
+    window.getScreenDetails()
+      .then(function (details) {
+        function comprova() {
+          if (details.screens.length > 1) {
+            registrarAvis("S'ha detectat una segona pantalla connectada");
+          }
+        }
+        comprova();
+        details.addEventListener('screenschange', comprova);
+      })
+      .catch(function () {
+        // L'alumne ha denegat el permís o el navegador no ho suporta: no és crític,
+        // és una senyal complementària, no la base de la detecció.
+      });
+  }
+
+  document.addEventListener('fullscreenchange', function () {
+    if (examenIniciat && !suspes && !estaEnFullscreen()) {
+      registrarAvis('Ha sortit de pantalla completa');
+    }
+  });
+  document.addEventListener('webkitfullscreenchange', function () {
+    if (examenIniciat && !suspes && !estaEnFullscreen()) {
+      registrarAvis('Ha sortit de pantalla completa');
+    }
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (examenIniciat && !suspes && document.hidden) {
+      registrarAvis('Ha canviat de pestanya o minimitzat la finestra');
+    }
+  });
+
+  window.addEventListener('blur', function () {
+    if (examenIniciat && !suspes && !document.hidden) {
+      registrarAvis('Ha canviat de finestra o aplicació');
+    }
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    if (examenIniciat && !suspes) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+})();
+</script>
