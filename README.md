@@ -125,6 +125,20 @@ los `POST` se envían con `Content-Type: text/plain;charset=utf-8` aunque el
 cuerpo sea JSON; `doPost` lo parsea igualmente con
 `JSON.parse(e.postData.contents)`. Los `GET` no necesitan este truco.
 
+### Fiabilidad en móvil
+
+En móvil, cambiar de app suele cortar la red de la pestaña casi al
+instante, antes de que un `fetch` normal complete su respuesta. Por eso
+`registrarAvis` no espera al servidor: cuenta el aviso y actualiza la
+pantalla en el momento (optimista), y envía el registro con
+`navigator.sendBeacon` (con `fetch({keepalive: true})` como reserva si
+`sendBeacon` no está disponible) — ambos están pensados para seguir
+enviándose aunque la página quede oculta o se cierre. Como consecuencia,
+el contador que ve el alumno es siempre local; si por lo que sea el envío
+al servidor se perdiera, el recuento de `Registre` podría quedar un aviso
+por detrás del que vio el alumno, un compromiso aceptado a cambio de que
+la detección en móvil sea fiable.
+
 ## Probar el flujo antes de dárselo al alumnado
 
 1. Pon `Estat d'examen = ACTIU` y un `Avisos` bajo (p. ej. 2) para probar

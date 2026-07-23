@@ -2,17 +2,41 @@
 <html lang="ca">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Examen</title>
 <style>
+  :root {
+    --bg-1: #0f172a;
+    --bg-2: #1e293b;
+    --card: rgba(30, 41, 59, 0.92);
+    --card-border: rgba(148, 163, 184, 0.18);
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --warn: #f59e0b;
+    --warn-bg: rgba(120, 53, 15, 0.55);
+    --danger: #ef4444;
+    --danger-bg: rgba(127, 29, 29, 0.6);
+  }
+
+  * { box-sizing: border-box; }
+
   html, body {
     margin: 0;
     padding: 0;
     height: 100%;
-    font-family: Arial, sans-serif;
+    background: radial-gradient(circle at top, var(--bg-2), var(--bg-1));
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
-  .amagat { display: none !important; }
+  .amagat {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
 
   .overlay {
     position: fixed;
@@ -20,50 +44,115 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(20, 20, 20, 0.96);
-    color: #fff;
+    background: rgba(2, 6, 23, 0.72);
+    backdrop-filter: blur(6px);
     z-index: 1000;
-    padding: 24px;
-    box-sizing: border-box;
+    padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.25s ease;
   }
 
   .targeta {
-    max-width: 560px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 100%;
+    overflow-y: auto;
     text-align: center;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 32px 28px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
   }
 
-  .targeta-avis { background: #b45309; padding: 32px; border-radius: 8px; }
-  .targeta-error { background: #7f1d1d; padding: 32px; border-radius: 8px; }
+  .icona { font-size: 2.2rem; line-height: 1; margin-bottom: 8px; }
 
-  .descripcio, .normes { white-space: pre-wrap; text-align: left; }
-  .detalls { text-align: left; }
+  h1 { font-size: 1.5rem; margin: 0 0 12px; }
+  h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 20px 0 8px;
+    text-align: left;
+  }
+
+  .targeta-avis { background: var(--warn-bg); border-color: rgba(245, 158, 11, 0.4); }
+  .targeta-error { background: var(--danger-bg); border-color: rgba(239, 68, 68, 0.4); }
+
+  .descripcio, .normes {
+    white-space: pre-wrap;
+    text-align: left;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .detalls {
+    text-align: left;
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+  }
+  .detalls li strong { color: var(--text); }
 
   .camp {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     text-align: left;
-    margin-top: 12px;
+    margin-top: 14px;
   }
+  .camp label { font-size: 0.85rem; color: var(--text-muted); }
   .camp input {
-    padding: 8px;
-    font-size: 1rem;
-    border-radius: 4px;
-    border: none;
+    padding: 12px 14px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: rgba(15, 23, 42, 0.6);
+    color: var(--text);
   }
-  #error-formulari { color: #fca5a5; min-height: 1.2em; margin-top: 8px; }
+  .camp input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  }
 
-  #btn-comenzar, #btn-tornar-fullscreen {
-    margin-top: 16px;
-    padding: 12px 24px;
+  #error-formulari { color: #fca5a5; min-height: 1.2em; margin-top: 10px; font-size: 0.88rem; }
+
+  .btn {
+    margin-top: 18px;
+    width: 100%;
+    padding: 13px 24px;
     font-size: 1rem;
+    font-weight: 600;
     border: none;
-    border-radius: 6px;
-    background: #2563eb;
+    border-radius: 10px;
+    background: var(--accent);
     color: #fff;
     cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
   }
-  #btn-comenzar:disabled { background: #555; cursor: not-allowed; }
+  .btn:hover { background: var(--accent-hover); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { background: #475569; cursor: not-allowed; }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    border: 3px solid rgba(148, 163, 184, 0.3);
+    border-top-color: var(--accent);
+    animation: girar 0.8s linear infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
 
   #pantalla-examen {
     position: fixed;
@@ -71,23 +160,40 @@
     display: flex;
     flex-direction: column;
     background: #000;
+    opacity: 1;
+    transition: opacity 0.25s ease;
   }
   #barra-superior {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 16px;
-    background: #111;
-    color: #fff;
+    gap: 12px;
+    padding: 10px max(16px, env(safe-area-inset-left)) 10px max(16px, env(safe-area-inset-right));
+    padding-top: max(10px, env(safe-area-inset-top));
+    background: #0b1220;
+    color: var(--text);
     font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
   }
-  #forms-frame { flex: 1; border: none; width: 100%; }
+  #cronometre { font-weight: 700; letter-spacing: 0.03em; }
+  #avisos-comptador {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warn);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  #forms-frame { flex: 1; border: none; width: 100%; background: #fff; }
 </style>
 </head>
 <body>
 
   <div id="pantalla-carrega" class="overlay">
-    <div class="targeta"><p>Carregant l'examen...</p></div>
+    <div class="targeta">
+      <div class="spinner"></div>
+      <p class="descripcio" style="text-align:center">Carregant l'examen…</p>
+    </div>
   </div>
 
   <div id="pantalla-inici" class="overlay amagat">
@@ -97,21 +203,21 @@
       <h2>Normes</h2>
       <p class="normes" id="normes-examen"></p>
       <ul class="detalls">
-        <li>Temps: <span id="detall-temps"></span> minuts</li>
-        <li>Avisos permesos abans de suspendre: <span id="detall-avisos"></span></li>
+        <li>⏱ Temps: <strong id="detall-temps"></strong> minuts</li>
+        <li>⚠️ Avisos permesos abans de suspendre: <strong id="detall-avisos"></strong></li>
       </ul>
 
       <form id="formulari-inici">
         <div class="camp">
           <label for="input-nom">Nom i cognoms</label>
-          <input type="text" id="input-nom" required>
+          <input type="text" id="input-nom" autocomplete="name" required>
         </div>
         <div class="camp">
           <label for="input-correu">Correu</label>
-          <input type="email" id="input-correu" required>
+          <input type="email" id="input-correu" autocomplete="email" required>
         </div>
         <div id="error-formulari"></div>
-        <button type="submit" id="btn-comenzar">Comenzar examen</button>
+        <button type="submit" class="btn" id="btn-comenzar">Comenzar examen</button>
       </form>
     </div>
   </div>
@@ -119,21 +225,23 @@
   <div id="pantalla-examen" class="amagat">
     <div id="barra-superior">
       <span id="cronometre">--:--</span>
-      <span id="avisos-comptador">Avisos: <span id="avisos-actuals">0</span>/<span id="avisos-max-barra"></span></span>
+      <span id="avisos-comptador">⚠️ <span id="avisos-actuals">0</span>/<span id="avisos-max-barra"></span></span>
     </div>
     <iframe id="forms-frame" allow="fullscreen"></iframe>
   </div>
 
   <div id="overlay-avis" class="overlay amagat">
     <div class="targeta targeta-avis">
-      <h2 id="avis-titol">Avís</h2>
+      <div class="icona">⚠️</div>
+      <h1 id="avis-titol">Avís</h1>
       <p id="avis-missatge"></p>
-      <button id="btn-tornar-fullscreen">Tornar a pantalla completa</button>
+      <button class="btn" id="btn-tornar-fullscreen">Tornar a pantalla completa</button>
     </div>
   </div>
 
   <div id="overlay-suspes" class="overlay amagat">
     <div class="targeta targeta-error">
+      <div class="icona">⛔</div>
       <h1>Has estat suspès</h1>
       <p>Has superat el nombre màxim d'avisos. Parla amb el professor/a.</p>
     </div>
@@ -141,6 +249,7 @@
 
   <div id="overlay-temps" class="overlay amagat">
     <div class="targeta targeta-error">
+      <div class="icona">⏰</div>
       <h1>S'ha acabat el temps</h1>
       <p>Envia el formulari ara mateix si encara no ho has fet.</p>
     </div>
@@ -148,6 +257,7 @@
 
   <div id="overlay-error" class="overlay amagat">
     <div class="targeta targeta-error">
+      <div class="icona">❌</div>
       <h1 id="error-titol">Error</h1>
       <p id="error-missatge"></p>
     </div>
@@ -315,36 +425,50 @@
       overlayError.classList.remove('amagat');
     }
 
+    /**
+     * El navegador sovint talla la xarxa just quan la pestanya passa a
+     * segon pla (típic en mòbil en canviar d'app), així que no podem
+     * esperar la resposta del servidor per avisar: comptem l'avís de
+     * seguida en local i l'enviem amb sendBeacon/keepalive, dissenyats
+     * per sobreviure encara que la pàgina quedi oculta o es tanqui.
+     */
     function registrarAvis(motiu) {
       if (!examenIniciat || suspes) return;
       var ara = Date.now();
       if (ara - ultimAvisTimestamp < DEDUP_MS) return;
       ultimAvisTimestamp = ara;
 
+      comptadorAvisos += 1;
+      avisosActuals.textContent = comptadorAvisos;
+
+      if (avisosMax > 0 && comptadorAvisos >= avisosMax) {
+        mostraSuspes();
+      } else {
+        mostraAvis(motiu);
+      }
+
+      enviarAvis_(motiu);
+    }
+
+    function enviarAvis_(motiu) {
+      var payload = JSON.stringify({ action: 'warning', token: token, reason: motiu });
+      if (navigator.sendBeacon && navigator.sendBeacon(API_URL, payload)) return;
       fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'warning', token: token, reason: motiu })
-      })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          if (data.error) return;
-          comptadorAvisos = data.avisos;
-          avisosActuals.textContent = comptadorAvisos;
-          if (data.suspended) {
-            mostraSuspes();
-          } else {
-            mostraAvis(motiu);
-          }
-        })
-        .catch(function () {});
+        body: payload,
+        keepalive: true
+      }).catch(function () {});
     }
 
     function enviarEstat_(accio, estat) {
+      var payload = JSON.stringify({ action: accio, token: token, status: estat });
+      if (navigator.sendBeacon && navigator.sendBeacon(API_URL, payload)) return;
       fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: accio, token: token, status: estat })
+        body: payload,
+        keepalive: true
       }).catch(function () {});
     }
 
@@ -386,6 +510,12 @@
     window.addEventListener('blur', function () {
       if (examenIniciat && !suspes && !document.hidden) {
         registrarAvis('Ha canviat de finestra o aplicació');
+      }
+    });
+
+    window.addEventListener('pagehide', function () {
+      if (examenIniciat && !suspes) {
+        registrarAvis('Ha tancat o recarregat la pàgina');
       }
     });
 
