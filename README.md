@@ -73,9 +73,9 @@ examen (el código de acceso en sí solo se cambia desde el Sheet).
 
 1. Abre el Google Sheet con las pestañas `Configuracio` y `Registre`.
 2. Extensiones → Apps Script.
-3. Copia `Code.gs`, `Config.gs`, `Registre.gs` al proyecto, y sustituye el
-   contenido de `appsscript.json` (Ver → Mostrar manifest de projecto) por
-   el de este repo.
+3. Copia `Code.gs` al proyecto (todo el backend está en un único archivo),
+   y sustituye el contenido de `appsscript.json` (Ver → Mostrar manifest de
+   projecto) por el de este repo.
 4. Implementar → Nueva implementación → tipo **Aplicación web**.
    - **Ejecutar como**: *Yo (tu cuenta)* — el script siempre corre con tus
      permisos para poder escribir en el Sheet, independientemente de quién
@@ -148,7 +148,7 @@ El icono ⚙️ (arriba a la derecha, oculto mientras el examen está en curso)
 abre un formulario protegido por el `Codi d'accés professor` del Sheet, con
 los mismos campos que `Configuracio`: título, descripción, normas, avisos
 máximos, tiempo, enlace del Forms y estado (ACTIU/INACTIU). El código se
-valida siempre en el backend (`checkTeacherCode_` en `Config.gs`) — nunca
+valida siempre en el backend (`checkTeacherCode_` en `Code.gs`) — nunca
 se compara en el cliente, para que no se pueda leer en el código fuente de
 la página. Útil, por ejemplo, para activar el examen desde el propio móvil
 sin abrir el Sheet.
