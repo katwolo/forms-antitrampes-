@@ -80,6 +80,7 @@
 
   .targeta-avis { background: var(--warn-bg); border-color: rgba(245, 158, 11, 0.4); }
   .targeta-error { background: var(--danger-bg); border-color: rgba(239, 68, 68, 0.4); }
+  .targeta-ok { background: rgba(21, 94, 60, 0.55); border-color: rgba(34, 197, 94, 0.4); }
 
   .descripcio, .normes {
     white-space: pre-wrap;
@@ -118,13 +119,24 @@
     background: rgba(15, 23, 42, 0.6);
     color: var(--text);
   }
-  .camp input:focus {
+  .camp input, .camp textarea, .camp select {
+    padding: 12px 14px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: rgba(15, 23, 42, 0.6);
+    color: var(--text);
+    font-family: inherit;
+  }
+  .camp textarea { resize: vertical; }
+  .camp input:focus, .camp textarea:focus, .camp select:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
   }
 
-  #error-formulari { color: #fca5a5; min-height: 1.2em; margin-top: 10px; font-size: 0.88rem; }
+  #error-formulari, .camp-error { color: #fca5a5; min-height: 1.2em; margin-top: 10px; font-size: 0.88rem; }
+  .camp-error.ok { color: #86efac; }
 
   .btn {
     margin-top: 18px;
@@ -142,6 +154,36 @@
   .btn:hover { background: var(--accent-hover); }
   .btn:active { transform: scale(0.98); }
   .btn:disabled { background: #475569; cursor: not-allowed; }
+
+  .btn-secundari {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+  }
+  .btn-secundari:hover { background: rgba(148, 163, 184, 0.12); color: var(--text); }
+
+  #btn-config {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    z-index: 1050;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--card-border);
+    background: rgba(30, 41, 59, 0.75);
+    color: var(--text);
+    font-size: 1.15rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #btn-config:hover { background: rgba(51, 65, 85, 0.9); }
+
+  #overlay-config { z-index: 1100; }
+  #overlay-config .targeta { text-align: left; }
+  #overlay-config h1 { text-align: center; }
 
   .spinner {
     width: 28px;
@@ -188,6 +230,8 @@
 </style>
 </head>
 <body>
+
+  <button id="btn-config" aria-label="Configuració del professorat" title="Configuració">⚙️</button>
 
   <div id="pantalla-carrega" class="overlay">
     <div class="targeta">
@@ -255,11 +299,72 @@
     </div>
   </div>
 
+  <div id="overlay-enviat" class="overlay amagat">
+    <div class="targeta targeta-ok">
+      <div class="icona">✅</div>
+      <h1>Examen enviat</h1>
+      <p>El teu examen s'ha registrat correctament. Ja pots tancar aquesta pestanya.</p>
+    </div>
+  </div>
+
   <div id="overlay-error" class="overlay amagat">
     <div class="targeta targeta-error">
       <div class="icona">❌</div>
       <h1 id="error-titol">Error</h1>
       <p id="error-missatge"></p>
+    </div>
+  </div>
+
+  <div id="overlay-config" class="overlay amagat">
+    <div class="targeta">
+      <h1>⚙️ Configuració (professorat)</h1>
+
+      <div id="config-login">
+        <div class="camp">
+          <label for="input-codi">Codi d'accés</label>
+          <input type="password" id="input-codi" autocomplete="off">
+        </div>
+        <div id="config-login-error" class="camp-error"></div>
+        <button type="button" class="btn" id="btn-config-entrar">Entrar</button>
+        <button type="button" class="btn btn-secundari" id="btn-config-tancar-login">Tancar</button>
+      </div>
+
+      <form id="config-formulari" class="amagat">
+        <div class="camp">
+          <label for="cfg-titol">Títol de l'examen</label>
+          <input type="text" id="cfg-titol">
+        </div>
+        <div class="camp">
+          <label for="cfg-descripcio">Descripció</label>
+          <textarea id="cfg-descripcio" rows="2"></textarea>
+        </div>
+        <div class="camp">
+          <label for="cfg-normes">Normes</label>
+          <textarea id="cfg-normes" rows="3"></textarea>
+        </div>
+        <div class="camp">
+          <label for="cfg-avisos">Avisos màxims abans de suspendre</label>
+          <input type="number" id="cfg-avisos" min="0" step="1">
+        </div>
+        <div class="camp">
+          <label for="cfg-temps">Temps de l'examen (minuts)</label>
+          <input type="number" id="cfg-temps" min="1" step="1">
+        </div>
+        <div class="camp">
+          <label for="cfg-forms">Enllaç del Google Forms</label>
+          <input type="url" id="cfg-forms">
+        </div>
+        <div class="camp">
+          <label for="cfg-estat">Estat de l'examen</label>
+          <select id="cfg-estat">
+            <option value="ACTIU">ACTIU</option>
+            <option value="INACTIU">INACTIU</option>
+          </select>
+        </div>
+        <div id="config-error" class="camp-error"></div>
+        <button type="submit" class="btn" id="btn-config-guardar">Desar canvis</button>
+        <button type="button" class="btn btn-secundari" id="btn-config-tancar">Tancar</button>
+      </form>
     </div>
   </div>
 
@@ -276,6 +381,7 @@
     var DEDUP_MS = 1500;
     var timerInterval = null;
     var token = null;
+    var iframeLoadCount = 0;
 
     var pantallaCarrega = document.getElementById('pantalla-carrega');
     var pantallaInici = document.getElementById('pantalla-inici');
@@ -283,6 +389,7 @@
     var overlayAvis = document.getElementById('overlay-avis');
     var overlaySuspes = document.getElementById('overlay-suspes');
     var overlayTemps = document.getElementById('overlay-temps');
+    var overlayEnviat = document.getElementById('overlay-enviat');
     var overlayError = document.getElementById('overlay-error');
     var avisTitol = document.getElementById('avis-titol');
     var avisMissatge = document.getElementById('avis-missatge');
@@ -291,6 +398,7 @@
     var iframe = document.getElementById('forms-frame');
     var errorFormulari = document.getElementById('error-formulari');
     var btnComenzar = document.getElementById('btn-comenzar');
+    var btnConfig = document.getElementById('btn-config');
 
     fetch(API_URL)
       .then(function (res) { return res.json(); })
@@ -356,8 +464,119 @@
       ocultarAvis();
     });
 
+    inicialitzaConfiguracio_();
+
+    /**
+     * Icona de configuració pel professorat: demana un codi (validat sempre
+     * al servidor, mai al client) i, si és correcte, mostra un formulari amb
+     * els paràmetres de Configuracio per editar-los sense tocar el Sheet.
+     */
+    function inicialitzaConfiguracio_() {
+      var teacherCode = null;
+      var overlayConfig = document.getElementById('overlay-config');
+      var configLogin = document.getElementById('config-login');
+      var configFormulari = document.getElementById('config-formulari');
+      var inputCodi = document.getElementById('input-codi');
+      var configLoginError = document.getElementById('config-login-error');
+      var configError = document.getElementById('config-error');
+      var btnConfigEntrar = document.getElementById('btn-config-entrar');
+      var btnConfigGuardar = document.getElementById('btn-config-guardar');
+
+      btnConfig.addEventListener('click', function () {
+        overlayConfig.classList.remove('amagat');
+        configLogin.classList.remove('amagat');
+        configFormulari.classList.add('amagat');
+        configLoginError.textContent = '';
+        inputCodi.value = '';
+        inputCodi.focus();
+      });
+
+      document.getElementById('btn-config-tancar-login').addEventListener('click', tancarConfig_);
+      document.getElementById('btn-config-tancar').addEventListener('click', tancarConfig_);
+
+      function tancarConfig_() {
+        overlayConfig.classList.add('amagat');
+      }
+
+      btnConfigEntrar.addEventListener('click', function () {
+        var codi = inputCodi.value.trim();
+        if (!codi) return;
+        btnConfigEntrar.disabled = true;
+        configLoginError.textContent = '';
+
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'configGet', codi: codi })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            btnConfigEntrar.disabled = false;
+            if (data.error) {
+              configLoginError.textContent = data.missatge || 'No es pot accedir.';
+              return;
+            }
+            teacherCode = codi;
+            document.getElementById('cfg-titol').value = data.titol || '';
+            document.getElementById('cfg-descripcio').value = data.descripcio || '';
+            document.getElementById('cfg-normes').value = data.normes || '';
+            document.getElementById('cfg-avisos').value = data.avisosMax || 0;
+            document.getElementById('cfg-temps').value = data.tempsMinuts || 0;
+            document.getElementById('cfg-forms').value = data.formsUrl || '';
+            document.getElementById('cfg-estat').value = data.estat === 'ACTIU' ? 'ACTIU' : 'INACTIU';
+            configError.textContent = '';
+            configError.classList.remove('ok');
+            configLogin.classList.add('amagat');
+            configFormulari.classList.remove('amagat');
+          })
+          .catch(function () {
+            btnConfigEntrar.disabled = false;
+            configLoginError.textContent = 'Error de connexió.';
+          });
+      });
+
+      configFormulari.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        btnConfigGuardar.disabled = true;
+        configError.textContent = '';
+        configError.classList.remove('ok');
+
+        var fields = {
+          titol: document.getElementById('cfg-titol').value.trim(),
+          descripcio: document.getElementById('cfg-descripcio').value,
+          normes: document.getElementById('cfg-normes').value,
+          avisosMax: Number(document.getElementById('cfg-avisos').value) || 0,
+          tempsMinuts: Number(document.getElementById('cfg-temps').value) || 0,
+          formsUrl: document.getElementById('cfg-forms').value.trim(),
+          estat: document.getElementById('cfg-estat').value
+        };
+
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'configSave', codi: teacherCode, fields: fields })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            btnConfigGuardar.disabled = false;
+            if (data.error) {
+              configError.textContent = data.missatge || "No s'ha pogut desar.";
+              return;
+            }
+            configError.textContent = 'Canvis desats.';
+            configError.classList.add('ok');
+          })
+          .catch(function () {
+            btnConfigGuardar.disabled = false;
+            configError.textContent = 'Error de connexió.';
+          });
+      });
+    }
+
     function comencarExamen(data) {
       demanaFullscreen();
+      btnConfig.classList.add('amagat');
+      iframeLoadCount = 0;
       iframe.src = data.formsUrl + (data.formsUrl.indexOf('?') === -1 ? '?' : '&') + 'embedded=true';
       pantallaInici.classList.add('amagat');
       pantallaExamen.classList.remove('amagat');
@@ -367,10 +586,39 @@
       comprovarPantallesConnectades();
     }
 
+    /**
+     * El Forms viu en un iframe d'un altre domini: no podem llegir la seva
+     * URL per saber si s'ha enviat (CORS). El que sí veiem és l'esdeveniment
+     * load del propi iframe — es dispara un cop en carregar el formulari, i
+     * una segona vegada quan Forms navega a la pàgina de confirmació en
+     * enviar-lo (canviar de secció dins el mateix formulari NO recarrega
+     * l'iframe). Amb això detectem l'enviament sense poder llegir el contingut.
+     */
+    iframe.addEventListener('load', function () {
+      iframeLoadCount += 1;
+      if (iframeLoadCount > 1) finalitzarPerEnviament();
+    });
+
+    function finalitzarPerEnviament() {
+      if (suspes || !examenIniciat) return;
+      examenIniciat = false;
+      if (timerInterval) clearInterval(timerInterval);
+      sortirFullscreen();
+      overlayAvis.classList.add('amagat');
+      pantallaExamen.classList.add('amagat');
+      overlayEnviat.classList.remove('amagat');
+      enviarEstat_('finish', 'enviat');
+    }
+
     function demanaFullscreen() {
       var el = document.documentElement;
       var request = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
       if (request) request.call(el);
+    }
+
+    function sortirFullscreen() {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if (exit && estaEnFullscreen()) exit.call(document);
     }
 
     function estaEnFullscreen() {
@@ -394,7 +642,9 @@
     }
 
     function tempsExhaurit() {
-      if (suspes) return;
+      if (suspes || !examenIniciat) return;
+      examenIniciat = false;
+      sortirFullscreen();
       overlayTemps.classList.remove('amagat');
       enviarEstat_('finish', 'timeout');
     }
@@ -412,6 +662,7 @@
     function mostraSuspes() {
       suspes = true;
       if (timerInterval) clearInterval(timerInterval);
+      sortirFullscreen();
       overlayAvis.classList.add('amagat');
       pantallaExamen.classList.add('amagat');
       overlaySuspes.classList.remove('amagat');

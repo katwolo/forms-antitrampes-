@@ -57,8 +57,17 @@ Sin cambios respecto a la plantilla original — dos pestañas:
 - **Registre** (cabeceras en la fila 1): `Nom`, `Correu`, `Avisos`,
   `Última acció`, `Historial`, `Token`, `Timestamp Inici`.
 
-El profesor sigue configurando el examen **editando directamente estas
-celdas**.
+Además, añade a `Configuracio` una fila nueva que no estaba en la
+plantilla original:
+
+- `Codi d'accés professor` (columna A) con el código que quieras en la
+  columna B — protege la icona de configuración de `index.html` (ver más
+  abajo). Sin esta fila (o con la columna B vacía), la icona rechazará
+  cualquier código.
+
+El profesor puede seguir configurando el examen **editando directamente
+las celdas**, o usar la icona ⚙️ de `index.html` para los parámetros del
+examen (el código de acceso en sí solo se cambia desde el Sheet).
 
 ## 1. Desplegar el backend de Apps Script
 
@@ -122,6 +131,27 @@ celdas**.
   falsos en cada toque. `visibilitychange` (cambiar de pestaña/minimizar) y
   `fullscreenchange` (salir de pantalla completa) ya cubren esos casos sin
   ese falso positivo.
+- Al enviar el Google Forms, `index.html` lo detecta escuchando el segundo
+  evento `load` del `<iframe>` (el primero es la carga inicial del
+  formulario; avanzar de sección dentro del propio Forms no recarga el
+  iframe, solo el envío final navega a la página de confirmación). No se
+  puede leer la URL del iframe por ser de otro dominio (CORS), así que esto
+  es lo único observable desde fuera. Al detectarlo, deja de contar avisos,
+  sale de pantalla completa automáticamente y muestra "Examen enviat" — así
+  el alumno no se queda atrapado en pantalla completa después de enviar (lo
+  mismo ocurre si se acaba el tiempo o si se suspende: siempre se libera la
+  pantalla completa).
+
+### Icona de configuración (profesorado)
+
+El icono ⚙️ (arriba a la derecha, oculto mientras el examen está en curso)
+abre un formulario protegido por el `Codi d'accés professor` del Sheet, con
+los mismos campos que `Configuracio`: título, descripción, normas, avisos
+máximos, tiempo, enlace del Forms y estado (ACTIU/INACTIU). El código se
+valida siempre en el backend (`checkTeacherCode_` en `Config.gs`) — nunca
+se compara en el cliente, para que no se pueda leer en el código fuente de
+la página. Útil, por ejemplo, para activar el examen desde el propio móvil
+sin abrir el Sheet.
 
 ### Nota técnica sobre CORS
 
@@ -160,4 +190,9 @@ la detección en móvil sea fiable.
 6. Vuelve a entrar con el mismo correo → debe mostrar directamente la
    pantalla de suspensión, no el examen.
 7. Deja que se agote el tiempo configurado → debe avisar de que se ha
-   acabado el tiempo.
+   acabado el tiempo (y salir de pantalla completa).
+8. Rellena y envía el propio Forms embebido → debe mostrar "Examen enviat"
+   y salir de pantalla completa, sin seguir contando avisos.
+9. Prueba el icono ⚙️: código incorrecto debe rechazarse, correcto debe
+   cargar los valores actuales; guarda un cambio y comprueba que se refleja
+   en la hoja `Configuracio`.

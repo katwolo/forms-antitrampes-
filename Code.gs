@@ -24,6 +24,10 @@ function doPost(e) {
       response = registerWarning_(body.token, body.reason);
     } else if (body.action === 'finish') {
       response = finishExam_(body.token, body.status);
+    } else if (body.action === 'configGet') {
+      response = configGet_(body.codi);
+    } else if (body.action === 'configSave') {
+      response = configSave_(body.codi, body.fields);
     } else {
       response = { error: 'Acció desconeguda' };
     }
@@ -79,6 +83,48 @@ function startExam_(nom, correu) {
     tempsMinuts: config.tempsMinuts,
     formsUrl: config.formsUrl
   };
+}
+
+function codeErrorResponse_(check) {
+  if (check.reason === 'NO_CONFIGURAT') {
+    return {
+      error: 'CODI_NO_CONFIGURAT',
+      missatge: "Cal afegir la fila \"Codi d'accés professor\" a Configuracio abans de poder entrar."
+    };
+  }
+  return { error: 'CODI_INCORRECTE', missatge: "Codi d'accés incorrecte." };
+}
+
+/**
+ * Es crida en obrir la icona de configuració: torna els camps editables
+ * perquè el formulari es pugui omplir amb els valors actuals.
+ */
+function configGet_(codi) {
+  var check = checkTeacherCode_(codi);
+  if (!check.ok) return codeErrorResponse_(check);
+
+  var config = getExamConfig_();
+  return {
+    titol: config.titol,
+    descripcio: config.descripcio,
+    normes: config.normes,
+    avisosMax: config.avisosMax,
+    tempsMinuts: config.tempsMinuts,
+    formsUrl: config.formsUrl,
+    estat: config.estat
+  };
+}
+
+function configSave_(codi, fields) {
+  var check = checkTeacherCode_(codi);
+  if (!check.ok) return codeErrorResponse_(check);
+
+  if (!fields || typeof fields !== 'object') {
+    return { error: 'DADES_INVALIDES', missatge: 'Falten dades del formulari.' };
+  }
+
+  saveExamConfig_(fields);
+  return { ok: true };
 }
 
 function onOpen() {

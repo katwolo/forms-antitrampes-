@@ -9,8 +9,14 @@ var CONFIG_LABELS = {
   tempsMinuts: "Temps de l'examen",
   formsUrl: 'Enllaç forms',
   estat: "Estat d'examen",
-  enllacAlumnat: "Enllaç que li hem de passar a l'alumnat"
+  enllacAlumnat: "Enllaç que li hem de passar a l'alumnat",
+  codiAcces: "Codi d'accés professor"
 };
+
+// Camps que el professor pot editar des de la icona de configuració de
+// index.html. El codi d'accés en queda fora a propòsit: es canvia
+// directament a la cel·la del Sheet, no des del formulari que protegeix.
+var EDITABLE_CONFIG_KEYS = ['titol', 'descripcio', 'normes', 'avisosMax', 'tempsMinuts', 'formsUrl', 'estat'];
 
 /**
  * Llegeix la pestanya Configuracio cercant les etiquetes a la columna A,
@@ -50,4 +56,51 @@ function getExamConfig_() {
   config.estat = String(config.estat || '').trim().toUpperCase();
 
   return config;
+}
+
+/**
+ * Compara el codi que ha escrit el professor amb el de la cel·la
+ * "Codi d'accés professor". Es valida sempre al servidor: si es comparés
+ * al client, qualsevol podria llegir el codi correcte al codi font.
+ */
+function checkTeacherCode_(codi) {
+  var config = getExamConfig_();
+  var real = String(config.codiAcces || '').trim();
+  if (!real) return { ok: false, reason: 'NO_CONFIGURAT' };
+  return { ok: String(codi || '').trim() === real, reason: 'INCORRECTE' };
+}
+
+/**
+ * Desa els camps editables a les seves cel·les de Configuracio, buscant
+ * la fila per l'etiqueta (igual que getExamConfig_) en comptes de números
+ * de fila fixos.
+ */
+function saveExamConfig_(fields) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CONFIG);
+    if (!sheet) throw new Error('No es troba la pestanya "' + SHEET_CONFIG + '"');
+
+    var labels = sheet.getRange(1, 1, sheet.getLastRow(), 1).getValues();
+    var rowByLabel = {};
+    labels.forEach(function (row, i) {
+      var label = String(row[0]).trim();
+      if (label) rowByLabel[label] = i + 1;
+    });
+
+    EDITABLE_CONFIG_KEYS.forEach(function (key) {
+      if (!(key in fields)) return;
+      var row = rowByLabel[CONFIG_LABELS[key]];
+      if (!row) return;
+
+      var value = fields[key];
+      if (key === 'avisosMax' || key === 'tempsMinuts') value = Number(value) || 0;
+      if (key === 'estat') value = String(value || '').trim().toUpperCase();
+
+      sheet.getRange(row, 2).setValue(value);
+    });
+  } finally {
+    lock.releaseLock();
+  }
 }
