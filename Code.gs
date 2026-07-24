@@ -58,6 +58,8 @@ function doPost(e) {
       response = configGet_(body.codi);
     } else if (body.action === 'configSave') {
       response = configSave_(body.codi, body.fields);
+    } else if (body.action === 'configReset') {
+      response = configReset_(body.codi);
     } else {
       response = { error: 'Acció desconeguda' };
     }
@@ -155,6 +157,29 @@ function configSave_(codi, fields) {
 
   saveExamConfig_(fields);
   return { ok: true };
+}
+
+/**
+ * Esborra totes les files de Registre (excepte la capçalera), com si
+ * l'examen no s'hagués fet mai. Es fa amb deleteRows, no clearContent,
+ * perquè els nous alumnes tornin a afegir-se just sota la capçalera.
+ */
+function configReset_(codi) {
+  var check = checkTeacherCode_(codi);
+  if (!check.ok) return codeErrorResponse_(check);
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getRegistreSheet_();
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.deleteRows(2, lastRow - 1);
+    }
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /**

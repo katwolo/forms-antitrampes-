@@ -153,6 +153,13 @@ se compara en el cliente, para que no se pueda leer en el código fuente de
 la página. Útil, por ejemplo, para activar el examen desde el propio móvil
 sin abrir el Sheet.
 
+Dentro del mismo formulario hay una "Zona perillosa" con el botón
+**Reiniciar registres**: borra todas las filas de `Registre` (menos la
+cabecera) — nombres, avisos, historial y tokens de todo el alumnado, como
+si el examen no se hubiera hecho nunca. Pide confirmación antes de
+ejecutarse porque no se puede deshacer; úsalo para volver a poner el
+examen a cero entre grupos/clases o tras una prueba.
+
 ### Nota técnica sobre CORS
 
 `index.html` y la API de Apps Script viven en dominios distintos, así que

@@ -162,6 +162,15 @@
   }
   .btn-secundari:hover { background: rgba(148, 163, 184, 0.12); color: var(--text); }
 
+  .btn-perill {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+  }
+  .btn-perill:hover { background: rgba(239, 68, 68, 0.15); color: #fecaca; }
+
+  .separador { border: none; border-top: 1px solid var(--card-border); margin: 22px 0 4px; }
+
   #btn-config {
     position: fixed;
     top: max(14px, env(safe-area-inset-top));
@@ -364,6 +373,13 @@
         <div id="config-error" class="camp-error"></div>
         <button type="submit" class="btn" id="btn-config-guardar">Desar canvis</button>
         <button type="button" class="btn btn-secundari" id="btn-config-tancar">Tancar</button>
+
+        <hr class="separador">
+        <div class="camp">
+          <label>Zona perillosa</label>
+          <button type="button" class="btn btn-perill" id="btn-config-reset">Reiniciar registres (esborra tot l'alumnat)</button>
+          <div id="config-reset-msg" class="camp-error"></div>
+        </div>
       </form>
     </div>
   </div>
@@ -569,6 +585,41 @@
           .catch(function () {
             btnConfigGuardar.disabled = false;
             configError.textContent = 'Error de connexió.';
+          });
+      });
+
+      var btnConfigReset = document.getElementById('btn-config-reset');
+      var configResetMsg = document.getElementById('config-reset-msg');
+
+      btnConfigReset.addEventListener('click', function () {
+        var confirmat = window.confirm(
+          "Segur que vols reiniciar els registres? S'esborraran TOTS els alumnes, avisos i historials " +
+          "de la pestanya Registre, com si l'examen no s'hagués fet mai. Aquesta acció no es pot desfer."
+        );
+        if (!confirmat) return;
+
+        btnConfigReset.disabled = true;
+        configResetMsg.textContent = '';
+        configResetMsg.classList.remove('ok');
+
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'configReset', codi: teacherCode })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            btnConfigReset.disabled = false;
+            if (data.error) {
+              configResetMsg.textContent = data.missatge || "No s'ha pogut reiniciar.";
+              return;
+            }
+            configResetMsg.textContent = 'Registres esborrats.';
+            configResetMsg.classList.add('ok');
+          })
+          .catch(function () {
+            btnConfigReset.disabled = false;
+            configResetMsg.textContent = 'Error de connexió.';
           });
       });
     }
