@@ -153,12 +153,19 @@ se compara en el cliente, para que no se pueda leer en el código fuente de
 la página. Útil, por ejemplo, para activar el examen desde el propio móvil
 sin abrir el Sheet.
 
-Dentro del mismo formulario hay una "Zona perillosa" con el botón
-**Reiniciar registres**: borra todas las filas de `Registre` (menos la
-cabecera) — nombres, avisos, historial y tokens de todo el alumnado, como
-si el examen no se hubiera hecho nunca. Pide confirmación antes de
-ejecutarse porque no se puede deshacer; úsalo para volver a poner el
-examen a cero entre grupos/clases o tras una prueba.
+Dentro del mismo formulario hay un botón **"⚠️ Zona perillosa: resetear
+examen"** que abre una pantalla aparte con dos formas de reiniciar:
+
+- **Reiniciar TOTS els alumnes**: borra todas las filas de `Registre`
+  (menos la cabecera) — nombres, avisos, historial y tokens de todo el
+  alumnado, como si el examen no se hubiera hecho nunca.
+- **Lista de alumnos registrados**: debajo aparece cada persona de
+  `Registre` con su nombre, correo y número de avisos actual, cada una con
+  su propio botón **Reiniciar** — borra solo la fila de ese alumno para que
+  pueda volver a empezar el examen desde cero sin afectar al resto (útil,
+  por ejemplo, si alguien fue avisado/suspendido por error o quiere repetir).
+
+Ambas acciones piden confirmación porque no se pueden deshacer.
 
 ### Nota técnica sobre CORS
 

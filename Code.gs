@@ -60,6 +60,10 @@ function doPost(e) {
       response = configSave_(body.codi, body.fields);
     } else if (body.action === 'configReset') {
       response = configReset_(body.codi);
+    } else if (body.action === 'configListStudents') {
+      response = configListStudents_(body.codi);
+    } else if (body.action === 'configResetStudent') {
+      response = configResetStudent_(body.codi, body.correu);
     } else {
       response = { error: 'Acció desconeguda' };
     }
@@ -176,6 +180,59 @@ function configReset_(codi) {
     if (lastRow > 1) {
       sheet.deleteRows(2, lastRow - 1);
     }
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Llista els alumnes de Registre perquè el professor pugui veure els
+ * avisos de cadascú i decidir si en reinicia algun en concret.
+ */
+function configListStudents_(codi) {
+  var check = checkTeacherCode_(codi);
+  if (!check.ok) return codeErrorResponse_(check);
+
+  var sheet = getRegistreSheet_();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { estudiants: [] };
+
+  var values = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+  var estudiants = values
+    .filter(function (row) { return String(row[1]).trim() !== ''; })
+    .map(function (row) {
+      return {
+        nom: row[0],
+        correu: row[1],
+        avisos: Number(row[2]) || 0,
+        ultimaAccio: row[3]
+      };
+    });
+
+  return { estudiants: estudiants };
+}
+
+/**
+ * Esborra la fila d'un sol alumne (identificat pel correu) perquè pugui
+ * tornar a començar l'examen des de zero, sense tocar la resta.
+ */
+function configResetStudent_(codi, correu) {
+  var check = checkTeacherCode_(codi);
+  if (!check.ok) return codeErrorResponse_(check);
+
+  if (!correu) {
+    return { error: 'CORREU_REQUERIT', missatge: "Cal indicar quin alumne." };
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var row = findStudentRow_(correu);
+    if (row === -1) {
+      return { error: 'NO_TROBAT', missatge: 'No es troba aquest alumne a Registre.' };
+    }
+    getRegistreSheet_().deleteRow(row);
     return { ok: true };
   } finally {
     lock.releaseLock();

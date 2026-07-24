@@ -194,6 +194,30 @@
   #overlay-config .targeta { text-align: left; }
   #overlay-config h1 { text-align: center; }
 
+  #llista-alumnes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 4px 0 18px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .alumne-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+  }
+  .alumne-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .alumne-info strong { font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alumne-correu { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alumne-avisos { font-size: 0.78rem; color: var(--warn); }
+  .btn-mini { margin-top: 0; width: auto; padding: 8px 14px; font-size: 0.85rem; flex-shrink: 0; }
+
   .spinner {
     width: 28px;
     height: 28px;
@@ -375,12 +399,22 @@
         <button type="button" class="btn btn-secundari" id="btn-config-tancar">Tancar</button>
 
         <hr class="separador">
-        <div class="camp">
-          <label>Zona perillosa</label>
-          <button type="button" class="btn btn-perill" id="btn-config-reset">Reiniciar registres (esborra tot l'alumnat)</button>
-          <div id="config-reset-msg" class="camp-error"></div>
-        </div>
+        <button type="button" class="btn btn-perill" id="btn-zona-perillosa">⚠️ Zona perillosa: resetear examen</button>
       </form>
+
+      <div id="config-reset-panell" class="amagat">
+        <h1>⚠️ Reiniciar examen</h1>
+
+        <div class="camp">
+          <button type="button" class="btn btn-perill" id="btn-reset-tots">Reiniciar TOTS els alumnes</button>
+          <div id="reset-tots-msg" class="camp-error"></div>
+        </div>
+
+        <h2>Alumnes registrats</h2>
+        <div id="llista-alumnes"></div>
+
+        <button type="button" class="btn btn-secundari" id="btn-reset-tancar">Tornar</button>
+      </div>
     </div>
   </div>
 
@@ -502,6 +536,7 @@
         overlayConfig.classList.remove('amagat');
         configLogin.classList.remove('amagat');
         configFormulari.classList.add('amagat');
+        document.getElementById('config-reset-panell').classList.add('amagat');
         configLoginError.textContent = '';
         inputCodi.value = '';
         inputCodi.focus();
@@ -588,19 +623,128 @@
           });
       });
 
-      var btnConfigReset = document.getElementById('btn-config-reset');
-      var configResetMsg = document.getElementById('config-reset-msg');
+      var btnZonaPerillosa = document.getElementById('btn-zona-perillosa');
+      var configResetPanell = document.getElementById('config-reset-panell');
+      var llistaAlumnes = document.getElementById('llista-alumnes');
+      var btnResetTots = document.getElementById('btn-reset-tots');
+      var resetTotsMsg = document.getElementById('reset-tots-msg');
+      var btnResetTancar = document.getElementById('btn-reset-tancar');
 
-      btnConfigReset.addEventListener('click', function () {
+      btnZonaPerillosa.addEventListener('click', function () {
+        configFormulari.classList.add('amagat');
+        configResetPanell.classList.remove('amagat');
+        resetTotsMsg.textContent = '';
+        resetTotsMsg.classList.remove('ok');
+        carregaLlistaAlumnes_();
+      });
+
+      btnResetTancar.addEventListener('click', function () {
+        configResetPanell.classList.add('amagat');
+        configFormulari.classList.remove('amagat');
+      });
+
+      function carregaLlistaAlumnes_() {
+        llistaAlumnes.textContent = 'Carregant...';
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'configListStudents', codi: teacherCode })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.error) {
+              llistaAlumnes.textContent = data.missatge || "No s'ha pogut carregar la llista.";
+              return;
+            }
+            renderitzaLlistaAlumnes_(data.estudiants || []);
+          })
+          .catch(function () {
+            llistaAlumnes.textContent = 'Error de connexió.';
+          });
+      }
+
+      function renderitzaLlistaAlumnes_(estudiants) {
+        llistaAlumnes.innerHTML = '';
+
+        if (!estudiants.length) {
+          var buit = document.createElement('p');
+          buit.className = 'descripcio';
+          buit.textContent = 'Encara no hi ha cap alumne registrat.';
+          llistaAlumnes.appendChild(buit);
+          return;
+        }
+
+        estudiants.forEach(function (est) {
+          var fila = document.createElement('div');
+          fila.className = 'alumne-fila';
+
+          var info = document.createElement('div');
+          info.className = 'alumne-info';
+
+          var nomEl = document.createElement('strong');
+          nomEl.textContent = est.nom || '(sense nom)';
+
+          var correuEl = document.createElement('span');
+          correuEl.className = 'alumne-correu';
+          correuEl.textContent = est.correu;
+
+          var avisosEl = document.createElement('span');
+          avisosEl.className = 'alumne-avisos';
+          avisosEl.textContent = 'Avisos: ' + est.avisos;
+
+          info.appendChild(nomEl);
+          info.appendChild(correuEl);
+          info.appendChild(avisosEl);
+
+          var btnReset = document.createElement('button');
+          btnReset.type = 'button';
+          btnReset.className = 'btn btn-perill btn-mini';
+          btnReset.textContent = 'Reiniciar';
+          btnReset.addEventListener('click', function () {
+            resetejaAlumne_(est.correu, fila);
+          });
+
+          fila.appendChild(info);
+          fila.appendChild(btnReset);
+          llistaAlumnes.appendChild(fila);
+        });
+      }
+
+      function resetejaAlumne_(correu, filaEl) {
         var confirmat = window.confirm(
-          "Segur que vols reiniciar els registres? S'esborraran TOTS els alumnes, avisos i historials " +
+          "Reiniciar l'alumne " + correu + "? Podrà tornar a començar l'examen des de zero."
+        );
+        if (!confirmat) return;
+
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'configResetStudent', codi: teacherCode, correu: correu })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.error) {
+              window.alert(data.missatge || "No s'ha pogut reiniciar aquest alumne.");
+              return;
+            }
+            filaEl.remove();
+            if (!llistaAlumnes.children.length) renderitzaLlistaAlumnes_([]);
+          })
+          .catch(function () {
+            window.alert('Error de connexió.');
+          });
+      }
+
+      btnResetTots.addEventListener('click', function () {
+        var confirmat = window.confirm(
+          "Segur que vols reiniciar TOTS els alumnes? S'esborraran tots els noms, avisos i historials " +
           "de la pestanya Registre, com si l'examen no s'hagués fet mai. Aquesta acció no es pot desfer."
         );
         if (!confirmat) return;
 
-        btnConfigReset.disabled = true;
-        configResetMsg.textContent = '';
-        configResetMsg.classList.remove('ok');
+        btnResetTots.disabled = true;
+        resetTotsMsg.textContent = '';
+        resetTotsMsg.classList.remove('ok');
 
         fetch(API_URL, {
           method: 'POST',
@@ -609,17 +753,18 @@
         })
           .then(function (res) { return res.json(); })
           .then(function (data) {
-            btnConfigReset.disabled = false;
+            btnResetTots.disabled = false;
             if (data.error) {
-              configResetMsg.textContent = data.missatge || "No s'ha pogut reiniciar.";
+              resetTotsMsg.textContent = data.missatge || "No s'ha pogut reiniciar.";
               return;
             }
-            configResetMsg.textContent = 'Registres esborrats.';
-            configResetMsg.classList.add('ok');
+            resetTotsMsg.textContent = 'Tots els registres esborrats.';
+            resetTotsMsg.classList.add('ok');
+            renderitzaLlistaAlumnes_([]);
           })
           .catch(function () {
-            btnConfigReset.disabled = false;
-            configResetMsg.textContent = 'Error de connexió.';
+            btnResetTots.disabled = false;
+            resetTotsMsg.textContent = 'Error de connexió.';
           });
       });
     }
