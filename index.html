@@ -38,6 +38,14 @@
     pointer-events: none !important;
   }
 
+  /* A diferència de .amagat (pensada per als .overlay amb fade, que són
+     position:fixed i per tant no ocupen espai encara que quedin invisibles),
+     les seccions internes del panell de configuració són divs normals dins
+     del flux de .targeta: amagar-les només amb opacity/visibility deixava
+     el seu alçada reservada i generava un buit enorme. Aquestes fan servir
+     display:none directament, ja que no necessiten transició de fade. */
+  .panell-amagat { display: none !important; }
+
   .overlay {
     position: fixed;
     inset: 0;
@@ -362,7 +370,7 @@
         <button type="button" class="btn btn-secundari" id="btn-config-tancar-login">Tancar</button>
       </div>
 
-      <form id="config-formulari" class="amagat">
+      <form id="config-formulari" class="panell-amagat">
         <div class="camp">
           <label for="cfg-titol">Títol de l'examen</label>
           <input type="text" id="cfg-titol">
@@ -402,7 +410,7 @@
         <button type="button" class="btn btn-perill" id="btn-zona-perillosa">⚠️ Zona perillosa: resetear examen</button>
       </form>
 
-      <div id="config-reset-panell" class="amagat">
+      <div id="config-reset-panell" class="panell-amagat">
         <h1>⚠️ Reiniciar examen</h1>
 
         <div class="camp">
@@ -534,9 +542,9 @@
 
       btnConfig.addEventListener('click', function () {
         overlayConfig.classList.remove('amagat');
-        configLogin.classList.remove('amagat');
-        configFormulari.classList.add('amagat');
-        document.getElementById('config-reset-panell').classList.add('amagat');
+        configLogin.classList.remove('panell-amagat');
+        configFormulari.classList.add('panell-amagat');
+        document.getElementById('config-reset-panell').classList.add('panell-amagat');
         configLoginError.textContent = '';
         inputCodi.value = '';
         inputCodi.focus();
@@ -577,8 +585,8 @@
             document.getElementById('cfg-estat').value = data.estat === 'ACTIU' ? 'ACTIU' : 'INACTIU';
             configError.textContent = '';
             configError.classList.remove('ok');
-            configLogin.classList.add('amagat');
-            configFormulari.classList.remove('amagat');
+            configLogin.classList.add('panell-amagat');
+            configFormulari.classList.remove('panell-amagat');
           })
           .catch(function () {
             btnConfigEntrar.disabled = false;
@@ -631,16 +639,16 @@
       var btnResetTancar = document.getElementById('btn-reset-tancar');
 
       btnZonaPerillosa.addEventListener('click', function () {
-        configFormulari.classList.add('amagat');
-        configResetPanell.classList.remove('amagat');
+        configFormulari.classList.add('panell-amagat');
+        configResetPanell.classList.remove('panell-amagat');
         resetTotsMsg.textContent = '';
         resetTotsMsg.classList.remove('ok');
         carregaLlistaAlumnes_();
       });
 
       btnResetTancar.addEventListener('click', function () {
-        configResetPanell.classList.add('amagat');
-        configFormulari.classList.remove('amagat');
+        configResetPanell.classList.add('panell-amagat');
+        configFormulari.classList.remove('panell-amagat');
       });
 
       function carregaLlistaAlumnes_() {
