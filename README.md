@@ -7,6 +7,13 @@ segunda pantalla, y lo suspende automáticamente al superar el número de
 avisos configurado. Apps Script actúa solo como API (config del examen +
 registro de avisos), consultada por `fetch` desde `index.html`.
 
+**Multi-examen:** un solo Sheet y un solo despliegue sirven tantos exámenes
+como haga falta (uno por módulo, clase o profesor). Cada examen tiene su
+propio ID, su propio Forms, su propia configuración, su propio registro de
+alumnado, su propio código de profesor y su propio enlace
+(`.../?examen=<ID>`). Así otros profesores pueden usarlo sin tocar tu Forms
+ni tus datos.
+
 ## Limitación importante (léela antes de usarlo)
 
 **Ningún navegador permite bloquear de verdad** Alt+Tab, Cmd+Tab, cerrar una
@@ -33,7 +40,7 @@ Script. Este proyecto asume el modelo que se acordó:
   Google (Doc, Sheet, Classroom, etc.) cuyo acceso ya está restringido a
   las cuentas del alumnado — ese es el control de acceso real.
 - Dentro de la página, el alumno simplemente **escribe su nombre y
-  correo** al empezar; ese dato es el que se guarda en `Registre`.
+  correo** al empezar; ese dato es el que se guarda en `Registre_<ID>` de ese examen.
 
 Esto implica que, si alguien consigue el enlace sin pasar por ese
 documento, podría escribir cualquier nombre/correo — es un modelo de
@@ -43,35 +50,56 @@ restringido.
 
 ## Estructura del Google Sheet
 
-Sin cambios respecto a la plantilla original — dos pestañas:
+- **Examens** (una fila por examen; cabeceras en la fila 1, se buscan por
+  nombre, así que puedes reordenar columnas o añadir otras tuyas):
 
-- **Configuracio** (columna A = etiqueta, columna B = valor):
-  `Titol examen`, `Descripció`, `Normes`, `Avisos` (número máximo antes de
-  suspender), `Temps de l'examen` (minutos), `Enllaç forms` (URL del
-  Google Forms), `Estat d'examen` (`ACTIU` / `INACTIU`).
-  `Enllaç que li hem de passar a l'alumnat`: caso especial — su valor va en
-  la **columna A de la fila siguiente**, no en la B de la misma fila (igual
-  que en la plantilla). Ahora aquí va la **URL de GitHub Pages**, no la de
-  Apps Script — el profesor la pega manualmente una vez publicada la página
-  (ver más abajo).
-- **Registre** (cabeceras en la fila 1): `Nom`, `Correu`, `Avisos`,
-  `Última acció`, `Historial`, `Token`, `Timestamp Inici`.
+  | Columna | Contenido |
+  |---|---|
+  | `ID` | Identificador corto y único, p. ej. `DAW1-M06-UF2`. Solo letras sin acentos, números, `-` y `_`. Aparece en el enlace y en el nombre de la pestaña de registro, por eso no se puede cambiar desde el panel. |
+  | `Mòdul`, `Classe`, `Professor` | Informativos, para organizar la lista. |
+  | `Titol examen`, `Descripció`, `Normes` | Lo que ve el alumno antes de empezar. |
+  | `Avisos` | Número máximo de avisos antes de suspender (0 = sin límite). |
+  | `Temps (minuts)` | Duración del examen. |
+  | `Enllaç forms` | URL del Google Forms de **ese** examen (solo se aceptan `docs.google.com/forms/...` o `forms.gle/...`). |
+  | `Estat` | `ACTIU` / `INACTIU`. |
+  | `Codi professor` | Código con el que el profesor de ese examen entra al panel ⚙️. Si un profesor usa el mismo código en todos sus exámenes, los ve todos juntos. |
+  | `Enllaç alumnat` | Se rellena solo (a partir de `URL pàgina alumnat`). |
 
-Además, añade a `Configuracio` una fila nueva que no estaba en la
-plantilla original:
+- **Registre_&lt;ID&gt;** (una pestaña por examen, se crea sola): `Nom`,
+  `Correu`, `Avisos`, `Última acció`, `Historial`, `Token`,
+  `Timestamp Inici`. Un mismo alumno puede hacer varios exámenes: cada uno
+  tiene su registro independiente, y reiniciar un examen no toca los demás.
 
-- `Codi d'accés professor` (columna A) con el código que quieras en la
-  columna B — protege la icona de configuración de `index.html` (ver más
-  abajo). Sin esta fila (o con la columna B vacía), la icona rechazará
-  cualquier código.
+- **Configuracio** (solo ajustes globales; columna A = etiqueta,
+  columna B = valor):
+  - `Codi administrador`: da acceso a **todos** los exámenes desde el panel
+    ⚙️ y permite crear exámenes para cualquier profesor.
+  - `URL pàgina alumnat`: la URL de GitHub Pages (sin `?examen=`), para
+    rellenar la columna `Enllaç alumnat`.
 
-El profesor puede seguir configurando el examen **editando directamente
-las celdas**, o usar la icona ⚙️ de `index.html` para los parámetros del
-examen (el código de acceso en sí solo se cambia desde el Sheet).
+El menú **Examen antitrampes** del Sheet tiene: *Activar / Desactivar
+examen* (actúa sobre la fila seleccionada de `Examens` o pregunta el ID),
+*Inicialitzar fulls*, *Migrar l'examen antic* y *Regenerar enllaços de
+l'alumnat*.
+
+### Quién puede hacer qué
+
+| | Profesor (su `Codi professor`) | Administrador (`Codi administrador`) |
+|---|---|---|
+| Ver y editar exámenes | Solo los que tienen su código | Todos |
+| Crear exámenes | Sí, siempre con su propio código | Sí, para cualquier código |
+| Cambiar el código de un examen | No | Sí |
+| Reiniciar alumnos / eliminar el examen | Solo de sus exámenes | De todos |
+
+Un profesor nuevo (sin ningún examen todavía) no tiene código: el
+administrador le crea el primer examen con el código que acuerden y, a
+partir de ahí, ese profesor puede crear los siguientes él mismo. Cada
+profesor debe usar un código distinto: dos profesores con el mismo código
+verían los exámenes del otro.
 
 ## 1. Desplegar el backend de Apps Script
 
-1. Abre el Google Sheet con las pestañas `Configuracio` y `Registre`.
+1. Abre el Google Sheet.
 2. Extensiones → Apps Script.
 3. Copia `Code.gs` al proyecto (todo el backend está en un único archivo),
    y sustituye el contenido de `appsscript.json` (Ver → Mostrar manifest de
@@ -86,37 +114,92 @@ examen (el código de acceso en sí solo se cambia desde el Sheet).
 5. Copia la URL `.../exec` que te da el despliegue.
 6. Cada vez que cambies el código de Apps Script, para que los cambios
    lleguen a los alumnos hace falta gestionar la implementación
-   (Implementar → Gestionar implementaciones → editar la existente, para
-   no cambiar la URL) o crear una nueva y actualizar `API_URL` en
-   `index.html`.
+   (Implementar → Gestionar implementaciones → editar la existente y elegir
+   **Versión nueva**, para no cambiar la URL) o crear una nueva y
+   actualizar `API_URL` en `index.html`.
 
-## 2. Configurar y publicar `index.html` en GitHub Pages
+## 2. Preparar el Sheet (instalación nueva o migración)
 
-1. En `index.html`, sustituye la constante al principio del `<script>`:
+Recarga el Sheet para que aparezca el menú **Examen antitrampes**.
+
+- **Si ya tenías un examen con el formato antiguo** (una sola
+  `Configuracio` + `Registre`): menú → *Migrar l'examen antic*. Te pide un
+  ID para ese examen y entonces:
+  - crea la pestaña `Examens` con una fila con tu configuración actual;
+  - renombra `Registre` a `Registre_<ID>` (conserva los datos);
+  - tu antiguo `Codi d'accés professor` pasa a ser el código de ese examen
+    y, si aún no había, también el `Codi administrador` (cámbialo después
+    si quieres que sean distintos);
+  - copia la URL de GitHub Pages que tenías a `URL pàgina alumnat`.
+
+  Las filas antiguas de `Configuracio` (`Titol examen`, `Normes`, …) dejan
+  de usarse y puedes borrarlas. **Importante:** el enlace antiguo (sin
+  `?examen=`) deja de funcionar; reparte el nuevo enlace que aparece en
+  `Enllaç alumnat`.
+- **Si es una instalación nueva**: menú → *Inicialitzar fulls*, y rellena
+  `Codi administrador` y `URL pàgina alumnat` en `Configuracio`. Después
+  crea los exámenes desde el panel ⚙️ (o escribiendo filas en `Examens`).
+
+## 3. Configurar y publicar `index.html` en GitHub Pages
+
+1. En `index.html`, la constante al principio del `<script>`:
    ```js
-   var API_URL = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE';
+   var API_URL = '...';
    ```
-   por la URL `.../exec` copiada en el paso anterior.
+   debe ser la URL `.../exec` copiada en el paso 1.
 2. Sube el cambio a este repositorio (rama que sirva GitHub Pages, o la
    rama por defecto tras el merge).
 3. En GitHub: Settings → Pages → Build and deployment → Source:
    *Deploy from a branch* → elige la rama y carpeta raíz (`/`).
 4. GitHub publicará `index.html` en la URL `https://<usuario>.github.io/<repo>/`
-   (o el dominio propio si has configurado uno).
-5. Pega esa URL en el Sheet, en la celda bajo
-   `Enllaç que li hem de passar a l'alumnat` (o usa el menú del Sheet si
-   prefieres automatizarlo más adelante).
-6. Coloca esa URL de GitHub Pages dentro del documento de Google que ya
-   tienes restringido al alumnado.
+   (o el dominio propio si has configurado uno). Pégala en
+   `URL pàgina alumnat` y usa el menú *Regenerar enllaços de l'alumnat*.
+5. Cada profesor coloca el enlace de **su** examen
+   (`https://<usuario>.github.io/<repo>/?examen=<ID>`) dentro del documento
+   de Google que ya tiene restringido a su alumnado.
+
+## Alternativa: un profesor con su propio Sheet (`?api=`)
+
+Si un profesor prefiere que sus datos no estén en tu Sheet, puede hacer una
+copia del Sheet, desplegar su propio Apps Script (pasos 1 y 2) y usar
+**la misma página de GitHub Pages** añadiendo su URL de despliegue al
+enlace:
+
+```
+https://<usuario>.github.io/<repo>/?examen=<ID>&api=<su URL .../exec>
+```
+
+(la URL de `api` conviene codificarla, el botón "Copiar enllaç" del panel ya
+lo hace). Por seguridad, `index.html` solo acepta en `api` direcciones
+`https://script.google.com/macros/s/.../exec` (o
+`script.google.com/a/macros/<dominio>/s/.../exec`); cualquier otra se
+ignora y se usa la API por defecto.
+
+## Límites de Google a tener en cuenta
+
+- Apps Script admite unas **30 ejecuciones simultáneas** por cuenta. Con
+  todos los exámenes en tu despliegue, si muchas clases empiezan a la vez
+  (sobre todo en el momento de pulsar "Comenzar examen"), algunas
+  peticiones pueden fallar puntualmente; el alumno solo tiene que volver a
+  intentarlo. Si se queda corto, la alternativa `?api=` reparte la carga
+  entre cuentas.
+- Las escrituras usan un bloqueo (`LockService`) común a todos los
+  exámenes. Para que se note lo menos posible, cada aviso se escribe en una
+  sola operación y cada examen busca solo en su propia pestaña de registro.
+- Como propietario del Sheet, ves los registros de todos los exámenes.
 
 ## Cómo funciona el flujo
 
-- `index.html` al cargar hace `GET` a `API_URL` para obtener el título,
-  descripción, normas, avisos máximos, tiempo y estado del examen (JSON).
-- Si `Estat d'examen` no es `ACTIU`, muestra "examen no disponible" y no
-  deja continuar.
+- `index.html` lee el ID del examen de la URL (`?examen=<ID>`). Si falta,
+  muestra "Enllaç incomplet"; si no existe, "Examen no trobat".
+- Hace `GET` a `API_URL?examen=<ID>` para obtener el título, descripción,
+  normas, avisos máximos, tiempo y estado de ese examen (JSON).
+- Si el `Estat` del examen no es `ACTIU`, muestra "examen no disponible" y
+  no deja continuar.
+- Todas las peticiones siguientes (`start`, `warning`, `finish`) llevan el
+  ID del examen, y el backend trabaja solo con su pestaña `Registre_<ID>`.
 - El alumno escribe nombre y correo y pulsa "Comenzar examen": se envía un
-  `POST` con `action: "start"`. El backend busca su fila en `Registre` (por
+  `POST` con `action: "start"`. El backend busca su fila en `Registre_<ID>` (por
   correo) o la crea, fija el `Timestamp Inici` en el servidor (para que el
   cronómetro no se pueda alargar tocando el reloj del cliente ni
   recargando), y si ya estaba suspendido lo indica de inmediato.
@@ -144,28 +227,37 @@ examen (el código de acceso en sí solo se cambia desde el Sheet).
 
 ### Icona de configuración (profesorado)
 
-El icono ⚙️ (arriba a la derecha, oculto mientras el examen está en curso)
-abre un formulario protegido por el `Codi d'accés professor` del Sheet, con
-los mismos campos que `Configuracio`: título, descripción, normas, avisos
-máximos, tiempo, enlace del Forms y estado (ACTIU/INACTIU). El código se
-valida siempre en el backend (`checkTeacherCode_` en `Code.gs`) — nunca
-se compara en el cliente, para que no se pueda leer en el código fuente de
-la página. Útil, por ejemplo, para activar el examen desde el propio móvil
-sin abrir el Sheet.
+El icono ⚙️ (arriba a la derecha, oculto mientras el examen está en curso;
+visible también en la página sin `?examen=`) pide un código, que se valida
+siempre en el backend (`authExam_` / `login_` en `Code.gs`) — nunca se
+compara en el cliente, para que no se pueda leer en el código fuente.
 
-Dentro del mismo formulario hay un botón **"⚠️ Zona perillosa: resetear
-examen"** que abre una pantalla aparte con dos formas de reiniciar:
+- Con un **código de profesor** se ven solo los exámenes que tienen ese
+  código; con el **código de administrador**, todos. El examen del enlace
+  actual aparece el primero y resaltado.
+- Cada examen de la lista tiene **Editar** y **Copiar enllaç** (copia el
+  enlace del alumnado, `?examen=<ID>`, y el `&api=` si lo hubiera).
+- **➕ Nou examen** crea una fila nueva en `Examens` y su pestaña
+  `Registre_<ID>`. Se crea en estado `INACTIU` si no eliges otro.
+- En **Editar** se cambian módulo, clase, profesor, título, descripción,
+  normas, avisos, tiempo, Forms y estado (ACTIU/INACTIU) — útil, por
+  ejemplo, para activar el examen desde el móvil sin abrir el Sheet. El ID
+  no se puede cambiar; el código del profesor, solo el administrador.
 
-- **Reiniciar TOTS els alumnes**: borra todas las filas de `Registre`
-  (menos la cabecera) — nombres, avisos, historial y tokens de todo el
-  alumnado, como si el examen no se hubiera hecho nunca.
-- **Lista de alumnos registrados**: debajo aparece cada persona de
-  `Registre` con su nombre, correo y número de avisos actual, cada una con
-  su propio botón **Reiniciar** — borra solo la fila de ese alumno para que
-  pueda volver a empezar el examen desde cero sin afectar al resto (útil,
-  por ejemplo, si alguien fue avisado/suspendido por error o quiere repetir).
+Dentro de **Editar** hay un botón **"⚠️ Zona perillosa: resetear examen"**
+que abre una pantalla aparte con dos formas de reiniciar **ese examen**
+(los demás no se tocan):
 
-Ambas acciones piden confirmación porque no se pueden deshacer.
+- **Reiniciar TOTS els alumnes d'aquest examen**: borra todas las filas de
+  su `Registre_<ID>` (menos la cabecera), como si no se hubiera hecho nunca.
+- **Lista de alumnos registrados**: cada persona con su nombre, correo y
+  avisos, con su propio botón **Reiniciar** — borra solo la fila de ese
+  alumno para que pueda volver a empezar desde cero.
+
+Y **🗑 Eliminar aquest examen** borra su fila de `Examens` y su pestaña de
+registro; pide escribir el ID para confirmar.
+
+Todas estas acciones piden confirmación porque no se pueden deshacer.
 
 ### Nota técnica sobre CORS
 
@@ -186,19 +278,19 @@ pantalla en el momento (optimista), y envía el registro con
 `sendBeacon` no está disponible) — ambos están pensados para seguir
 enviándose aunque la página quede oculta o se cierre. Como consecuencia,
 el contador que ve el alumno es siempre local; si por lo que sea el envío
-al servidor se perdiera, el recuento de `Registre` podría quedar un aviso
+al servidor se perdiera, el recuento de `Registre_<ID>` podría quedar un aviso
 por detrás del que vio el alumno, un compromiso aceptado a cambio de que
 la detección en móvil sea fiable.
 
 ## Probar el flujo antes de dárselo al alumnado
 
-1. Pon `Estat d'examen = ACTIU` y un `Avisos` bajo (p. ej. 2) para probar
-   rápido.
-2. Abre la URL de GitHub Pages, rellena nombre/correo y empieza.
+1. Crea un examen de prueba desde ⚙️ (o migra el tuyo), con `Estat = ACTIU`
+   y un `Avisos` bajo (p. ej. 2) para probar rápido.
+2. Abre su enlace (`.../?examen=<ID>`), rellena nombre/correo y empieza.
 3. Comprueba: entra en pantalla completa al pulsar "Comenzar examen", el
    Forms se ve dentro del iframe, el cronómetro cuenta hacia atrás.
 4. Sal de pantalla completa (Esc) → debe aparecer el aviso 1/N y sumar una
-   fila en `Registre`.
+   fila en `Registre_<ID>`.
 5. Cambia de pestaña o minimiza → segundo aviso → si coincide con el
    máximo, debe bloquear el examen y marcar "SUSPÈS" en `Última acció`.
 6. Vuelve a entrar con el mismo correo → debe mostrar directamente la
@@ -207,6 +299,10 @@ la detección en móvil sea fiable.
    acabado el tiempo (y salir de pantalla completa).
 8. Rellena y envía el propio Forms embebido → debe mostrar "Examen enviat"
    y salir de pantalla completa, sin seguir contando avisos.
-9. Prueba el icono ⚙️: código incorrecto debe rechazarse, correcto debe
-   cargar los valores actuales; guarda un cambio y comprueba que se refleja
-   en la hoja `Configuracio`.
+9. Abre la página sin `?examen=` → debe mostrar "Enllaç incomplet"; con un
+   ID inexistente → "Examen no trobat".
+10. Prueba el icono ⚙️: un código incorrecto debe rechazarse; con el código
+    de un profesor solo deben verse sus exámenes; con el de administrador,
+    todos. Guarda un cambio y comprueba que se refleja en `Examens`.
+11. Con un segundo examen, haz el mismo correo en los dos: cada uno debe
+    tener su propio registro, y reiniciar uno no debe tocar el otro.
