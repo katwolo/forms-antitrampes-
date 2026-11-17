@@ -353,7 +353,7 @@ function login_(codi) {
       return {
         error: 'CODI_NO_CONFIGURAT',
         missatge: 'Encara no hi ha cap codi configurat. Afegeix el "' + GLOBAL_LABELS.codiAdmin +
-          '" a la pestanya ' + SHEET_CONFIG + ' (menú Examen antitrampes → Inicialitzar fulls).'
+          '" a la pestanya ' + SHEET_CONFIG + ' (menú Examen antitrampes → Crear / reparar plantilla).'
       };
     }
     return codiIncorrecte_();
@@ -686,8 +686,7 @@ function getRegistreSheet_(examenId, create) {
   var sheet = ss.getSheetByName(name);
   if (!sheet && create) {
     sheet = ss.insertSheet(name);
-    sheet.getRange(1, 1, 1, REGISTRE_HEADERS.length).setValues([REGISTRE_HEADERS]).setFontWeight('bold');
-    sheet.setFrozenRows(1);
+    formatRegistreSheet_(sheet);
   }
   return sheet;
 }
@@ -723,7 +722,7 @@ function onOpen() {
     .addItem('Activar examen', 'activarExamen')
     .addItem('Desactivar examen', 'desactivarExamen')
     .addSeparator()
-    .addItem('Inicialitzar fulls', 'inicialitzarFulls')
+    .addItem('Crear / reparar plantilla', 'crearPlantilla')
     .addItem("Migrar l'examen antic (Configuracio → Examens)", 'migrarExamenAntic')
     .addItem("Regenerar enllaços de l'alumnat", 'regenerarEnllacos')
     .addToUi();
@@ -768,30 +767,6 @@ function setEstatExamen_(estat) {
 }
 
 /**
- * Crea la pestanya Examens (amb capçaleres) i les files globals de
- * Configuracio si encara no existeixen. Es pot executar tantes vegades
- * com calgui: no esborra res.
- */
-function inicialitzarFulls() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  getExamensSheet_(true);
-
-  var config = ss.getSheetByName(SHEET_CONFIG) || ss.insertSheet(SHEET_CONFIG);
-  var labels = config.getLastRow() > 0
-    ? config.getRange(1, 1, config.getLastRow(), 1).getValues().map(function (r) { return String(r[0]).trim(); })
-    : [];
-  [GLOBAL_LABELS.codiAdmin, GLOBAL_LABELS.urlPagina].forEach(function (label) {
-    if (labels.indexOf(label) === -1) {
-      config.appendRow([label, '']);
-      labels.push(label);
-    }
-  });
-
-  ss.toast('Fulls preparats. Omple "' + GLOBAL_LABELS.codiAdmin + '" i "' + GLOBAL_LABELS.urlPagina +
-    '" a ' + SHEET_CONFIG + '.');
-}
-
-/**
  * Passa l'examen del format antic (un sol examen a Configuracio + pestanya
  * Registre) al nou format: una fila a Examens i la pestanya Registre_<ID>.
  * L'antic codi del professor passa a ser el codi d'aquest examen i, si
@@ -817,7 +792,7 @@ function migrarExamenAntic() {
     return;
   }
 
-  inicialitzarFulls();
+  crearPlantilla_({ exemple: false, preguntar: false });
 
   var values = config.getRange(1, 1, config.getLastRow(), 2).getValues();
   var byLabel = {};
@@ -866,6 +841,7 @@ function migrarExamenAntic() {
   var registreAntic = ss.getSheetByName(SHEET_REGISTRE_ANTIC);
   if (registreAntic && !ss.getSheetByName(SHEET_REGISTRE_PREFIX + id)) {
     registreAntic.setName(SHEET_REGISTRE_PREFIX + id);
+    formatRegistreSheet_(registreAntic);
   } else {
     getRegistreSheet_(id, true);
   }
@@ -891,11 +867,319 @@ function setGlobalIfEmpty_(config, label, value) {
 
 /** Torna a escriure la columna "Enllaç alumnat" de tots els exàmens. */
 function regenerarEnllacos() {
+  regenerarEnllacos_();
+  SpreadsheetApp.getActiveSpreadsheet().toast('Enllaços regenerats.');
+}
+
+function regenerarEnllacos_() {
   var sheet = getExamensSheet_(false);
   var cols = getExamColumns_(sheet);
   if (!cols.enllacAlumnat || !cols.id) return;
   getAllExams_().forEach(function (ex) {
     sheet.getRange(ex.row, cols.enllacAlumnat).setValue(buildStudentLink_(ex.id));
   });
-  SpreadsheetApp.getActiveSpreadsheet().toast('Enllaços regenerats.');
+}
+
+// ---------------------------------------------------------------------------
+// Plantilla del Sheet
+// ---------------------------------------------------------------------------
+
+// Explicacions que surten com a nota a les capçaleres d'Examens.
+var EXAM_NOTES = {
+  id: "Identificador curt i únic de l'examen (p. ex. DAW1-M06-UF2). Només lletres sense accents, " +
+    "números, - i _. Surt a l'enllaç i al nom de la pestanya Registre_<ID>: no el canviïs un cop repartit.",
+  modul: 'Informatiu: mòdul o assignatura.',
+  classe: 'Informatiu: grup o classe.',
+  professor: 'Informatiu: nom del professor/a.',
+  titol: "Títol que veu l'alumne abans de començar.",
+  descripcio: "Text que veu l'alumne sota el títol.",
+  normes: "Normes de l'examen que veu l'alumne.",
+  avisosMax: "Nombre d'avisos (sortir de pantalla completa, canviar de pestanya…) abans de suspendre. 0 = sense límit.",
+  tempsMinuts: "Durada de l'examen en minuts. Compta des que l'alumne prem \"Comenzar examen\".",
+  formsUrl: 'Enllaç del Google Forms (https://docs.google.com/forms/...).',
+  estat: "ACTIU: l'alumnat pot entrar. INACTIU: la pàgina diu que l'examen no està disponible.",
+  codi: "Codi amb què el professor/a d'aquest examen entra al panell ⚙️. Fes servir el mateix codi a " +
+    'tots els exàmens d\'un mateix professor i un codi diferent per a cada professor.',
+  enllacAlumnat: "S'omple sol a partir de \"URL pàgina alumnat\" (Configuracio). És l'enllaç que s'ha de passar a l'alumnat."
+};
+
+var EXAM_WIDTHS = {
+  id: 150, modul: 110, classe: 100, professor: 140, titol: 220, descripcio: 260, normes: 300,
+  avisosMax: 70, tempsMinuts: 110, formsUrl: 280, estat: 90, codi: 130, enllacAlumnat: 360
+};
+
+var GLOBAL_NOTES = {
+  codiAdmin: "Dona accés a TOTS els exàmens des del panell ⚙️ i permet crear-ne per a qualsevol professor. " +
+    'No el comparteixis.',
+  urlPagina: "URL de GitHub Pages on hi ha index.html, sense ?examen= (p. ex. https://usuari.github.io/repo/). " +
+    "Serveix per generar la columna \"Enllaç alumnat\" d'Examens."
+};
+
+var COLOR_CAPCALERA = '#3f3d99';
+var COLOR_CAPCALERA_TEXT = '#ffffff';
+
+/**
+ * Deixa el Sheet tal com el necessita el projecte (menú → "Crear / reparar
+ * plantilla"). Es pot executar tantes vegades com calgui: no esborra cap
+ * dada, només crea el que falta i torna a aplicar el format.
+ *
+ *  - Configuracio: Paràmetre | Valor | Explicació, amb "Codi administrador"
+ *    i "URL pàgina alumnat".
+ *  - Examens: totes les capçaleres (amb una nota explicativa a cadascuna),
+ *    validacions (Estat, Avisos, Temps, ID, enllaç del Forms), colors per
+ *    a ACTIU/INACTIU i, si està buida, una fila d'exemple INACTIVA.
+ *  - Registre_<ID>: capçaleres i format per a cada examen existent.
+ *  - Elimina la pestanya buida per defecte ("Full 1", "Hoja 1", "Sheet1").
+ *  - Si es llança des del menú, pregunta els valors globals que faltin.
+ */
+function crearPlantilla() {
+  crearPlantilla_({ exemple: true, preguntar: true });
+}
+
+// Nom antic de la funció; es manté perquè ja està documentat al README.
+function inicialitzarFulls() {
+  crearPlantilla();
+}
+
+function crearPlantilla_(opts) {
+  opts = opts || {};
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var config = preparaConfiguracio_(ss);
+  var examens = preparaExamens_(ss, opts.exemple);
+  ss.setActiveSheet(examens);
+  ss.moveActiveSheet(1);
+  ss.setActiveSheet(config);
+  ss.moveActiveSheet(1);
+
+  getAllExams_().forEach(function (ex) {
+    formatRegistreSheet_(getRegistreSheet_(ex.id, true));
+  });
+
+  esborraFullBuitPerDefecte_(ss);
+
+  if (opts.preguntar) preguntaValorsGlobals_(config);
+
+  regenerarEnllacos_();
+  ss.setActiveSheet(examens);
+  ss.toast('Plantilla preparada.');
+}
+
+function preparaConfiguracio_(ss) {
+  var sheet = ss.getSheetByName(SHEET_CONFIG);
+  if (!sheet) sheet = ss.insertSheet(SHEET_CONFIG);
+
+  // Capçalera només si la pestanya és nova/buida: en un Configuracio antic
+  // (format d'un sol examen) la fila 1 ja té dades i no s'ha de trepitjar.
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, 3).setValues([['Paràmetre', 'Valor', 'Explicació']]);
+    estilCapcalera_(sheet.getRange(1, 1, 1, 3));
+    sheet.setFrozenRows(1);
+  }
+
+  var labels = sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 1), 1).getValues()
+    .map(function (r) { return String(r[0]).trim(); });
+
+  ['codiAdmin', 'urlPagina'].forEach(function (key) {
+    var label = GLOBAL_LABELS[key];
+    var idx = labels.indexOf(label);
+    var row;
+    if (idx === -1) {
+      sheet.appendRow([label, '', GLOBAL_NOTES[key]]);
+      row = sheet.getLastRow();
+      labels.push(label);
+    } else {
+      row = idx + 1;
+      sheet.getRange(row, 3).setValue(GLOBAL_NOTES[key]);
+    }
+    sheet.getRange(row, 1).setFontWeight('bold');
+    sheet.getRange(row, 2).setBackground('#fff8e1');
+    sheet.getRange(row, 3).setFontColor('#666666').setWrap(true);
+  });
+
+  sheet.setColumnWidth(1, 200);
+  sheet.setColumnWidth(2, 320);
+  sheet.setColumnWidth(3, 480);
+  return sheet;
+}
+
+function preparaExamens_(ss, ambExemple) {
+  var sheet = getExamensSheet_(true);
+
+  // Afegeix al final les capçaleres que faltin (si algú n'ha esborrat o
+  // ve d'una versió anterior), sense moure les columnes existents.
+  var cols = getExamColumns_(sheet);
+  EXAM_KEYS_ORDER.forEach(function (key) {
+    if (cols[key]) return;
+    var col = sheet.getLastColumn() + 1;
+    sheet.getRange(1, col).setValue(EXAM_HEADERS[key]);
+    cols[key] = col;
+  });
+
+  var lastCol = sheet.getLastColumn();
+  estilCapcalera_(sheet.getRange(1, 1, 1, lastCol));
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(1);
+
+  var maxRows = Math.max(sheet.getMaxRows(), 200);
+  if (sheet.getMaxRows() < maxRows) sheet.insertRowsAfter(sheet.getMaxRows(), maxRows - sheet.getMaxRows());
+  var n = maxRows - 1;
+
+  EXAM_KEYS_ORDER.forEach(function (key) {
+    var c = cols[key];
+    sheet.getRange(1, c).setNote(EXAM_NOTES[key]);
+    sheet.setColumnWidth(c, EXAM_WIDTHS[key]);
+  });
+
+  var col = function (key) { return sheet.getRange(2, cols[key], n, 1); };
+
+  col('descripcio').setWrap(true);
+  col('normes').setWrap(true);
+  col('avisosMax').setHorizontalAlignment('center');
+  col('tempsMinuts').setHorizontalAlignment('center');
+  col('estat').setHorizontalAlignment('center').setFontWeight('bold');
+  col('id').setFontWeight('bold');
+  col('enllacAlumnat').setFontColor('#666666').setFontStyle('italic');
+  sheet.getRange(2, 1, n, lastCol).setVerticalAlignment('top');
+
+  // Validacions. Les que podrien quedar massa estrictes per errors de
+  // format (ID, URL) només avisen (triangle vermell) en lloc de bloquejar.
+  col('estat').setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireValueInList(['ACTIU', 'INACTIU'], true)
+    .setAllowInvalid(false)
+    .setHelpText('ACTIU o INACTIU')
+    .build());
+  col('avisosMax').setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireNumberGreaterThanOrEqualTo(0)
+    .setAllowInvalid(false)
+    .setHelpText("Nombre enter ≥ 0 (0 = sense límit d'avisos)")
+    .build());
+  col('tempsMinuts').setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireNumberGreaterThanOrEqualTo(1)
+    .setAllowInvalid(false)
+    .setHelpText('Minuts (≥ 1)')
+    .build());
+  col('formsUrl').setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireTextIsUrl()
+    .setAllowInvalid(true)
+    .setHelpText('Enllaç del Google Forms (https://docs.google.com/forms/...)')
+    .build());
+  var idA1 = sheet.getRange(2, cols.id).getA1Notation();
+  col('id').setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireFormulaSatisfied('=REGEXMATCH(TO_TEXT(' + idA1 + '),"^[A-Za-z0-9_-]{1,40}$")')
+    .setAllowInvalid(true)
+    .setHelpText('Només lletres sense accents, números, - i _ (màx. 40)')
+    .build());
+
+  // Colors per a l'estat. Abans s'eliminen els que hagués posat una
+  // execució anterior, perquè no s'acumulin.
+  var estatRange = col('estat');
+  var estatA1 = estatRange.getA1Notation();
+  var rules = sheet.getConditionalFormatRules().filter(function (rule) {
+    return !rule.getRanges().some(function (r) { return r.getA1Notation() === estatA1; });
+  });
+  rules.push(SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('ACTIU').setBackground('#d9ead3').setFontColor('#1e6b2f')
+    .setRanges([estatRange]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('INACTIU').setBackground('#eeeeee').setFontColor('#777777')
+    .setRanges([estatRange]).build());
+  sheet.setConditionalFormatRules(rules);
+
+  if (ambExemple && getAllExams_().length === 0) {
+    var exemple = normalizeExam_({
+      id: 'EXEMPLE',
+      modul: 'M00',
+      classe: '1r',
+      professor: 'Nom del professor/a',
+      titol: "Examen d'exemple",
+      descripcio: "Esborra aquesta fila o fes-la servir per provar. Està INACTIVA.",
+      normes: "- No surtis de pantalla completa.\n- No canviïs de pestanya ni d'aplicació.\n" +
+        "- Envia el formulari abans que s'acabi el temps.",
+      avisosMax: 3,
+      tempsMinuts: 60,
+      formsUrl: '',
+      estat: 'INACTIU',
+      codi: ''
+    });
+    writeExamRow_(sheet, cols, 2, exemple);
+  }
+
+  return sheet;
+}
+
+/** Capçaleres i format d'una pestanya Registre_<ID>. */
+function formatRegistreSheet_(sheet) {
+  if (!sheet) return;
+  sheet.getRange(1, 1, 1, REGISTRE_HEADERS.length).setValues([REGISTRE_HEADERS]);
+  estilCapcalera_(sheet.getRange(1, 1, 1, REGISTRE_HEADERS.length));
+  sheet.setFrozenRows(1);
+  var widths = [180, 230, 70, 320, 420, 120, 150];
+  widths.forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
+  var rows = Math.max(sheet.getMaxRows() - 1, 1);
+  sheet.getRange(2, REG_COLS.avisos, rows, 1).setHorizontalAlignment('center');
+  sheet.getRange(2, REG_COLS.historial, rows, 1).setWrap(true);
+  sheet.getRange(2, REG_COLS.timestampInici, rows, 1).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  sheet.getRange(2, REG_COLS.token, rows, 1).setFontColor('#999999');
+  sheet.getRange(2, 1, rows, REGISTRE_HEADERS.length).setVerticalAlignment('top');
+}
+
+function estilCapcalera_(range) {
+  range.setFontWeight('bold')
+    .setBackground(COLOR_CAPCALERA)
+    .setFontColor(COLOR_CAPCALERA_TEXT)
+    .setVerticalAlignment('middle')
+    .setWrap(true);
+}
+
+function esborraFullBuitPerDefecte_(ss) {
+  ['Full 1', 'Full1', 'Hoja 1', 'Hoja1', 'Sheet1', 'Sheet 1', 'Feuille 1'].forEach(function (nom) {
+    var s = ss.getSheetByName(nom);
+    if (s && s.getLastRow() === 0 && s.getLastColumn() === 0 && ss.getSheets().length > 1) {
+      ss.deleteSheet(s);
+    }
+  });
+}
+
+/**
+ * Pregunta els valors globals que estiguin buits. Només funciona si s'ha
+ * llançat des del menú del Sheet (des de l'editor no hi ha interfície).
+ */
+function preguntaValorsGlobals_(config) {
+  var ui;
+  try {
+    ui = SpreadsheetApp.getUi();
+  } catch (e) {
+    return;
+  }
+  var global = getGlobalConfig_();
+
+  if (!global.codiAdmin) {
+    var r1 = ui.prompt('Codi administrador',
+      'Escriu el codi que et donarà accés a tots els exàmens des del panell ⚙️ (no el comparteixis):',
+      ui.ButtonSet.OK_CANCEL);
+    if (r1.getSelectedButton() === ui.Button.OK && r1.getResponseText().trim()) {
+      setGlobal_(config, GLOBAL_LABELS.codiAdmin, r1.getResponseText().trim());
+    }
+  }
+  if (!global.urlPagina) {
+    var r2 = ui.prompt('URL pàgina alumnat',
+      'Enganxa la URL de GitHub Pages on hi ha index.html (p. ex. https://usuari.github.io/repo/). ' +
+      'Si encara no la tens, deixa-ho en blanc.',
+      ui.ButtonSet.OK_CANCEL);
+    if (r2.getSelectedButton() === ui.Button.OK && r2.getResponseText().trim()) {
+      setGlobal_(config, GLOBAL_LABELS.urlPagina, r2.getResponseText().trim().split('?')[0]);
+    }
+  }
+}
+
+function setGlobal_(config, label, value) {
+  var labels = config.getRange(1, 1, config.getLastRow(), 1).getValues();
+  for (var i = 0; i < labels.length; i++) {
+    if (String(labels[i][0]).trim() === label) {
+      config.getRange(i + 1, 2).setValue(value);
+      return;
+    }
+  }
+  config.appendRow([label, value]);
 }

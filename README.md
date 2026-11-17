@@ -79,8 +79,8 @@ restringido.
 
 El menú **Examen antitrampes** del Sheet tiene: *Activar / Desactivar
 examen* (actúa sobre la fila seleccionada de `Examens` o pregunta el ID),
-*Inicialitzar fulls*, *Migrar l'examen antic* y *Regenerar enllaços de
-l'alumnat*.
+*Crear / reparar plantilla*, *Migrar l'examen antic* y *Regenerar
+enllaços de l'alumnat*.
 
 ### Quién puede hacer qué
 
@@ -136,9 +136,32 @@ Recarga el Sheet para que aparezca el menú **Examen antitrampes**.
   de usarse y puedes borrarlas. **Importante:** el enlace antiguo (sin
   `?examen=`) deja de funcionar; reparte el nuevo enlace que aparece en
   `Enllaç alumnat`.
-- **Si es una instalación nueva**: menú → *Inicialitzar fulls*, y rellena
-  `Codi administrador` y `URL pàgina alumnat` en `Configuracio`. Después
-  crea los exámenes desde el panel ⚙️ (o escribiendo filas en `Examens`).
+- **Si es una instalación nueva**: crea un Google Sheet en blanco, pega el
+  código (paso 1), recarga y usa el menú → **Crear / reparar plantilla**
+  (la primera vez Google pedirá autorizar el script). La función
+  `crearPlantilla()` deja el Sheet tal cual lo necesita el proyecto:
+  - **Configuracio** con las columnas `Paràmetre | Valor | Explicació` y
+    las filas `Codi administrador` y `URL pàgina alumnat` (te pregunta
+    ambos valores si están vacíos; la URL puedes dejarla para después).
+  - **Examens** con todas las cabeceras, una nota explicativa en cada una
+    (pasa el ratón por encima), columnas fijadas y con anchura ajustada,
+    desplegable `ACTIU`/`INACTIU` con colores, validación de `Avisos` (≥ 0)
+    y `Temps (minuts)` (≥ 1), y aviso (triángulo rojo, sin bloquear) si el
+    `ID` o el `Enllaç forms` no tienen el formato correcto.
+  - Una fila de ejemplo **EXEMPLE** (INACTIVA) con su pestaña
+    `Registre_EXEMPLE`, para ver cómo se rellena. Bórrala cuando quieras
+    (o elimínala desde el panel ⚙️, que borra también su registro).
+  - Elimina la pestaña vacía por defecto (`Full 1` / `Hoja 1` / `Sheet1`).
+
+  Después crea los exámenes desde el panel ⚙️ (o escribiendo filas en
+  `Examens`).
+
+  Se puede ejecutar tantas veces como quieras: **no borra datos**, solo
+  crea lo que falte (pestañas, filas de `Configuracio`, columnas de
+  `Examens` que alguien haya borrado, que se añaden al final) y vuelve a
+  aplicar formato y validaciones. Úsala también para "reparar" el Sheet si
+  alguien ha estropeado el formato. La fila de ejemplo solo se crea si
+  `Examens` está vacía.
 
 ## 3. Configurar y publicar `index.html` en GitHub Pages
 
