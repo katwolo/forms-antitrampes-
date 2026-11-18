@@ -202,7 +202,7 @@
   #overlay-config .targeta { text-align: left; }
   #overlay-config h1 { text-align: center; }
 
-  #llista-alumnes {
+  .llista-files {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -225,6 +225,12 @@
   .alumne-correu { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .alumne-avisos { font-size: 0.78rem; color: var(--warn); }
   .btn-mini { margin-top: 0; width: auto; padding: 8px 14px; font-size: 0.85rem; flex-shrink: 0; }
+  #llista-examens { max-height: 340px; }
+  .examen-botons { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .estat-actiu { color: #86efac; }
+  .estat-inactiu { color: var(--text-muted); }
+  .examen-actual { border-color: var(--accent); }
+  #camp-enllac .btn-mini { align-self: flex-start; }
 
   .spinner {
     width: 28px;
@@ -370,7 +376,33 @@
         <button type="button" class="btn btn-secundari" id="btn-config-tancar-login">Tancar</button>
       </div>
 
+      <div id="config-llista" class="panell-amagat">
+        <p class="descripcio" id="config-rol"></p>
+        <h2>Exàmens</h2>
+        <div id="llista-examens" class="llista-files"></div>
+        <div id="config-llista-msg" class="camp-error"></div>
+        <button type="button" class="btn" id="btn-nou-examen">➕ Nou examen</button>
+        <button type="button" class="btn btn-secundari" id="btn-config-tancar-llista">Tancar</button>
+      </div>
+
       <form id="config-formulari" class="panell-amagat">
+        <h2 id="config-form-titol">Examen</h2>
+        <div class="camp">
+          <label for="cfg-id">ID de l'examen (apareix a l'enllaç; no es pot canviar després)</label>
+          <input type="text" id="cfg-id" pattern="[A-Za-z0-9_\-]{1,40}" placeholder="p. ex. DAW1-M06-UF2" required>
+        </div>
+        <div class="camp">
+          <label for="cfg-modul">Mòdul</label>
+          <input type="text" id="cfg-modul">
+        </div>
+        <div class="camp">
+          <label for="cfg-classe">Classe / grup</label>
+          <input type="text" id="cfg-classe">
+        </div>
+        <div class="camp">
+          <label for="cfg-professor">Professor/a</label>
+          <input type="text" id="cfg-professor">
+        </div>
         <div class="camp">
           <label for="cfg-titol">Títol de l'examen</label>
           <input type="text" id="cfg-titol">
@@ -393,7 +425,7 @@
         </div>
         <div class="camp">
           <label for="cfg-forms">Enllaç del Google Forms</label>
-          <input type="url" id="cfg-forms">
+          <input type="url" id="cfg-forms" placeholder="https://docs.google.com/forms/...">
         </div>
         <div class="camp">
           <label for="cfg-estat">Estat de l'examen</label>
@@ -402,35 +434,70 @@
             <option value="INACTIU">INACTIU</option>
           </select>
         </div>
+        <div class="camp" id="camp-codi">
+          <label for="cfg-codi">Codi del professor/a d'aquest examen (només administració)</label>
+          <input type="text" id="cfg-codi" autocomplete="off">
+        </div>
+        <div class="camp panell-amagat" id="camp-enllac">
+          <label for="cfg-enllac">Enllaç per a l'alumnat</label>
+          <input type="text" id="cfg-enllac" readonly>
+          <button type="button" class="btn btn-secundari btn-mini" id="btn-copiar-enllac">Copiar enllaç</button>
+        </div>
         <div id="config-error" class="camp-error"></div>
         <button type="submit" class="btn" id="btn-config-guardar">Desar canvis</button>
-        <button type="button" class="btn btn-secundari" id="btn-config-tancar">Tancar</button>
+        <button type="button" class="btn btn-secundari" id="btn-config-tornar">Tornar a la llista</button>
 
-        <hr class="separador">
-        <button type="button" class="btn btn-perill" id="btn-zona-perillosa">⚠️ Zona perillosa: resetear examen</button>
+        <div id="zona-edicio">
+          <hr class="separador">
+          <button type="button" class="btn btn-perill" id="btn-zona-perillosa">⚠️ Zona perillosa: resetear examen</button>
+          <button type="button" class="btn btn-perill" id="btn-eliminar-examen">🗑 Eliminar aquest examen</button>
+        </div>
       </form>
 
       <div id="config-reset-panell" class="panell-amagat">
         <h1>⚠️ Reiniciar examen</h1>
+        <p class="descripcio" id="reset-examen-nom"></p>
 
         <div class="camp">
-          <button type="button" class="btn btn-perill" id="btn-reset-tots">Reiniciar TOTS els alumnes</button>
+          <button type="button" class="btn btn-perill" id="btn-reset-tots">Reiniciar TOTS els alumnes d'aquest examen</button>
           <div id="reset-tots-msg" class="camp-error"></div>
         </div>
 
         <h2>Alumnes registrats</h2>
-        <div id="llista-alumnes"></div>
+        <div id="llista-alumnes" class="llista-files"></div>
 
         <button type="button" class="btn btn-secundari" id="btn-reset-tancar">Tornar</button>
       </div>
     </div>
   </div>
+  </div>
 
   <script>
-  // ⚠️ Substitueix això per la URL ".../exec" del teu desplegament d'Apps Script.
-  var API_URL = 'https://script.google.com/macros/s/AKfycbw5ushrjd0lwANATBo9_VHgYDGa4De_HeA023NSHsA7Lb22B7DTvZk3gI_WO6_XeFarfA/exec';
+  // URL ".../exec" del desplegament d'Apps Script compartit. Es pot
+  // substituir amb ?api=<url> per fer servir el desplegament (i el Sheet)
+  // propi d'un altre professor, sense tocar aquest fitxer.
+  var API_URL = 'https://script.google.com/macros/s/AKfycbzQnJx4owofzd6y2rnFP2uZpRtqfL6YlS2mRxXKzW-zmQ-Crt37wZUfoaz46XNZlnpd/exec';
 
   (function () {
+    var params = new URLSearchParams(window.location.search);
+
+    // Només s'accepten URLs d'Apps Script: si no, qualsevol podria fer un
+    // enllaç amb el nostre domini que apuntés a un servidor qualsevol.
+    var API_REGEX = /^https:\/\/script\.google\.com\/(macros|a\/macros\/[A-Za-z0-9.-]+)\/s\/[A-Za-z0-9_-]+\/exec$/;
+    var apiOverride = params.get('api');
+    if (apiOverride && API_REGEX.test(apiOverride)) {
+      API_URL = apiOverride;
+    } else {
+      apiOverride = null;
+    }
+
+    // Identificador de l'examen (un per mòdul/classe), ve de ?examen=<ID>.
+    var examenId = (params.get('examen') || '').trim();
+
+    // Només s'incrusten formularis de Google, per evitar que un examen mal
+    // configurat (o una API aliena) carregui una pàgina qualsevol.
+    var FORMS_REGEX = /^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/)/;
+
     var comptadorAvisos = 0;
     var avisosMax = 0;
     var suspes = false;
@@ -458,28 +525,54 @@
     var btnComenzar = document.getElementById('btn-comenzar');
     var btnConfig = document.getElementById('btn-config');
 
-    fetch(API_URL)
-      .then(function (res) { return res.json(); })
-      .then(function (config) {
-        if (config.estat !== 'ACTIU') {
-          mostraError("Examen no disponible", "Aquest examen no està actiu ara mateix. Parla amb el professor/a.");
-          return;
-        }
-        document.getElementById('titol-examen').textContent = config.titol;
-        document.getElementById('descripcio-examen').textContent = config.descripcio;
-        document.getElementById('normes-examen').textContent = config.normes;
-        document.getElementById('detall-temps').textContent = config.tempsMinuts;
-        document.getElementById('detall-avisos').textContent = config.avisosMax;
-        document.getElementById('avisos-max-barra').textContent = config.avisosMax;
-        document.title = config.titol || 'Examen';
-        avisosMax = config.avisosMax;
+    function postApi_(body) {
+      return fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      }).then(function (res) { return res.json(); });
+    }
 
-        pantallaCarrega.classList.add('amagat');
-        pantallaInici.classList.remove('amagat');
-      })
-      .catch(function () {
-        mostraError('Error de connexió', "No s'ha pogut contactar amb el servidor de l'examen. Torna-ho a provar.");
-      });
+    function enllacAlumnat_(id) {
+      var url = window.location.origin + window.location.pathname + '?examen=' + encodeURIComponent(id);
+      if (apiOverride) url += '&api=' + encodeURIComponent(apiOverride);
+      return url;
+    }
+
+    if (!examenId) {
+      mostraError(
+        'Enllaç incomplet',
+        "A aquest enllaç li falta l'identificador de l'examen. Demana l'enllaç correcte al professor/a."
+      );
+    } else {
+      fetch(API_URL + '?examen=' + encodeURIComponent(examenId))
+        .then(function (res) { return res.json(); })
+        .then(function (config) {
+          if (config.error) {
+            mostraError('Examen no trobat', config.missatge || "No s'ha trobat aquest examen.");
+            return;
+          }
+          if (config.estat !== 'ACTIU') {
+            mostraError("Examen no disponible", "Aquest examen no està actiu ara mateix. Parla amb el professor/a.");
+            return;
+          }
+          examenId = config.id || examenId;
+          document.getElementById('titol-examen').textContent = config.titol;
+          document.getElementById('descripcio-examen').textContent = config.descripcio;
+          document.getElementById('normes-examen').textContent = config.normes;
+          document.getElementById('detall-temps').textContent = config.tempsMinuts;
+          document.getElementById('detall-avisos').textContent = config.avisosMax;
+          document.getElementById('avisos-max-barra').textContent = config.avisosMax;
+          document.title = config.titol || 'Examen';
+          avisosMax = config.avisosMax;
+
+          pantallaCarrega.classList.add('amagat');
+          pantallaInici.classList.remove('amagat');
+        })
+        .catch(function () {
+          mostraError('Error de connexió', "No s'ha pogut contactar amb el servidor de l'examen. Torna-ho a provar.");
+        });
+    }
 
     document.getElementById('formulari-inici').addEventListener('submit', function (ev) {
       ev.preventDefault();
@@ -488,12 +581,7 @@
       errorFormulari.textContent = '';
       btnComenzar.disabled = true;
 
-      fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'start', nom: nom, correu: correu })
-      })
-        .then(function (res) { return res.json(); })
+      postApi_({ action: 'start', examen: examenId, nom: nom, correu: correu })
         .then(function (data) {
           if (data.error) {
             errorFormulari.textContent = data.missatge || 'No es pot començar l\'examen.';
@@ -504,6 +592,11 @@
             comptadorAvisos = data.avisos;
             pantallaInici.classList.add('amagat');
             overlaySuspes.classList.remove('amagat');
+            return;
+          }
+          if (!FORMS_REGEX.test(String(data.formsUrl || ''))) {
+            errorFormulari.textContent = "L'enllaç del formulari d'aquest examen no és vàlid. Avisa el professor/a.";
+            btnComenzar.disabled = false;
             return;
           }
           token = data.token;
@@ -525,37 +618,81 @@
     inicialitzaConfiguracio_();
 
     /**
-     * Icona de configuració pel professorat: demana un codi (validat sempre
-     * al servidor, mai al client) i, si és correcte, mostra un formulari amb
-     * els paràmetres de Configuracio per editar-los sense tocar el Sheet.
+     * Icona de configuració pel professorat. El codi es valida sempre al
+     * servidor: amb el codi d'un professor es veuen només els seus exàmens,
+     * amb el codi d'administració es veuen tots i es poden crear per a
+     * qualsevol professor.
      */
     function inicialitzaConfiguracio_() {
       var teacherCode = null;
+      var rol = null;
+      var examens = [];
+      var editantId = null; // null = creant un examen nou
+
       var overlayConfig = document.getElementById('overlay-config');
       var configLogin = document.getElementById('config-login');
+      var configLlista = document.getElementById('config-llista');
       var configFormulari = document.getElementById('config-formulari');
+      var configResetPanell = document.getElementById('config-reset-panell');
       var inputCodi = document.getElementById('input-codi');
       var configLoginError = document.getElementById('config-login-error');
+      var configLlistaMsg = document.getElementById('config-llista-msg');
       var configError = document.getElementById('config-error');
       var btnConfigEntrar = document.getElementById('btn-config-entrar');
       var btnConfigGuardar = document.getElementById('btn-config-guardar');
+      var llistaExamens = document.getElementById('llista-examens');
+      var inputId = document.getElementById('cfg-id');
+      var campCodi = document.getElementById('camp-codi');
+      var campEnllac = document.getElementById('camp-enllac');
+      var inputEnllac = document.getElementById('cfg-enllac');
+      var zonaEdicio = document.getElementById('zona-edicio');
+
+      var CAMPS = {
+        modul: 'cfg-modul',
+        classe: 'cfg-classe',
+        professor: 'cfg-professor',
+        titol: 'cfg-titol',
+        descripcio: 'cfg-descripcio',
+        normes: 'cfg-normes',
+        avisosMax: 'cfg-avisos',
+        tempsMinuts: 'cfg-temps',
+        formsUrl: 'cfg-forms',
+        estat: 'cfg-estat',
+        codi: 'cfg-codi'
+      };
+
+      function mostraPanell_(panell) {
+        [configLogin, configLlista, configFormulari, configResetPanell].forEach(function (p) {
+          p.classList.toggle('panell-amagat', p !== panell);
+        });
+        overlayConfig.querySelector('.targeta').scrollTop = 0;
+      }
 
       btnConfig.addEventListener('click', function () {
         overlayConfig.classList.remove('amagat');
-        configLogin.classList.remove('panell-amagat');
-        configFormulari.classList.add('panell-amagat');
-        document.getElementById('config-reset-panell').classList.add('panell-amagat');
+        if (teacherCode) {
+          renderitzaLlistaExamens_();
+          mostraPanell_(configLlista);
+          return;
+        }
+        mostraPanell_(configLogin);
         configLoginError.textContent = '';
         inputCodi.value = '';
         inputCodi.focus();
       });
 
-      document.getElementById('btn-config-tancar-login').addEventListener('click', tancarConfig_);
-      document.getElementById('btn-config-tancar').addEventListener('click', tancarConfig_);
-
       function tancarConfig_() {
         overlayConfig.classList.add('amagat');
       }
+      document.getElementById('btn-config-tancar-login').addEventListener('click', tancarConfig_);
+      document.getElementById('btn-config-tancar-llista').addEventListener('click', tancarConfig_);
+
+      inputCodi.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          btnConfigEntrar.click();
+        }
+      });
 
       btnConfigEntrar.addEventListener('click', function () {
         var codi = inputCodi.value.trim();
@@ -563,12 +700,7 @@
         btnConfigEntrar.disabled = true;
         configLoginError.textContent = '';
 
-        fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'configGet', codi: codi })
-        })
-          .then(function (res) { return res.json(); })
+        postApi_({ action: 'login', codi: codi })
           .then(function (data) {
             btnConfigEntrar.disabled = false;
             if (data.error) {
@@ -576,17 +708,14 @@
               return;
             }
             teacherCode = codi;
-            document.getElementById('cfg-titol').value = data.titol || '';
-            document.getElementById('cfg-descripcio').value = data.descripcio || '';
-            document.getElementById('cfg-normes').value = data.normes || '';
-            document.getElementById('cfg-avisos').value = data.avisosMax || 0;
-            document.getElementById('cfg-temps').value = data.tempsMinuts || 0;
-            document.getElementById('cfg-forms').value = data.formsUrl || '';
-            document.getElementById('cfg-estat').value = data.estat === 'ACTIU' ? 'ACTIU' : 'INACTIU';
-            configError.textContent = '';
-            configError.classList.remove('ok');
-            configLogin.classList.add('panell-amagat');
-            configFormulari.classList.remove('panell-amagat');
+            rol = data.rol;
+            examens = data.examens || [];
+            document.getElementById('config-rol').textContent = rol === 'admin'
+              ? 'Has entrat com a administració: veus tots els exàmens.'
+              : 'Has entrat com a professor/a: veus els exàmens amb el teu codi.';
+            configLlistaMsg.textContent = '';
+            renderitzaLlistaExamens_();
+            mostraPanell_(configLlista);
           })
           .catch(function () {
             btnConfigEntrar.disabled = false;
@@ -594,35 +723,183 @@
           });
       });
 
+      function renderitzaLlistaExamens_() {
+        llistaExamens.innerHTML = '';
+        if (!examens.length) {
+          var buit = document.createElement('p');
+          buit.className = 'descripcio';
+          buit.textContent = 'Encara no hi ha cap examen.';
+          llistaExamens.appendChild(buit);
+          return;
+        }
+
+        // L'examen de l'enllaç actual, primer; la resta per ID.
+        var ordenats = examens.slice().sort(function (a, b) {
+          var aAct = a.id.toLowerCase() === examenId.toLowerCase() ? 0 : 1;
+          var bAct = b.id.toLowerCase() === examenId.toLowerCase() ? 0 : 1;
+          return aAct - bAct || a.id.localeCompare(b.id);
+        });
+
+        ordenats.forEach(function (ex) {
+          var fila = document.createElement('div');
+          fila.className = 'alumne-fila';
+          if (ex.id.toLowerCase() === examenId.toLowerCase()) fila.classList.add('examen-actual');
+
+          var info = document.createElement('div');
+          info.className = 'alumne-info';
+
+          var titol = document.createElement('strong');
+          titol.textContent = ex.titol || ex.id;
+
+          var detall = document.createElement('span');
+          detall.className = 'alumne-correu';
+          detall.textContent = [ex.id, ex.modul, ex.classe, ex.professor]
+            .filter(function (x) { return x; }).join(' · ');
+
+          var estat = document.createElement('span');
+          estat.className = 'alumne-avisos ' + (ex.estat === 'ACTIU' ? 'estat-actiu' : 'estat-inactiu');
+          estat.textContent = ex.estat === 'ACTIU' ? '● ACTIU' : '○ INACTIU';
+
+          info.appendChild(titol);
+          info.appendChild(detall);
+          info.appendChild(estat);
+
+          var botons = document.createElement('div');
+          botons.className = 'examen-botons';
+
+          var btnEditar = document.createElement('button');
+          btnEditar.type = 'button';
+          btnEditar.className = 'btn btn-mini';
+          btnEditar.textContent = 'Editar';
+          btnEditar.addEventListener('click', function () { obreFormulari_(ex); });
+
+          var btnCopiar = document.createElement('button');
+          btnCopiar.type = 'button';
+          btnCopiar.className = 'btn btn-secundari btn-mini';
+          btnCopiar.textContent = 'Copiar enllaç';
+          btnCopiar.addEventListener('click', function () {
+            copia_(enllacAlumnat_(ex.id), function (ok) {
+              configLlistaMsg.classList.toggle('ok', ok);
+              configLlistaMsg.textContent = ok
+                ? 'Enllaç de "' + ex.id + '" copiat.'
+                : enllacAlumnat_(ex.id);
+            });
+          });
+
+          botons.appendChild(btnEditar);
+          botons.appendChild(btnCopiar);
+          fila.appendChild(info);
+          fila.appendChild(botons);
+          llistaExamens.appendChild(fila);
+        });
+      }
+
+      function copia_(text, cb) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { cb(true); }, function () { cb(false); });
+        } else {
+          cb(false);
+        }
+      }
+
+      document.getElementById('btn-nou-examen').addEventListener('click', function () {
+        obreFormulari_(null);
+      });
+
+      function obreFormulari_(ex) {
+        editantId = ex ? ex.id : null;
+        document.getElementById('config-form-titol').textContent = ex ? 'Editar examen' : 'Nou examen';
+
+        inputId.value = ex ? ex.id : '';
+        inputId.readOnly = !!ex;
+        inputId.required = !ex;
+
+        Object.keys(CAMPS).forEach(function (key) {
+          var el = document.getElementById(CAMPS[key]);
+          var valor = ex ? ex[key] : '';
+          if (key === 'estat') valor = valor === 'ACTIU' ? 'ACTIU' : 'INACTIU';
+          if (!ex && key === 'avisosMax') valor = 3;
+          if (!ex && key === 'tempsMinuts') valor = 60;
+          el.value = valor === undefined || valor === null ? '' : valor;
+        });
+
+        // Només l'admin veu i canvia de qui és cada examen; un professor
+        // sempre crea els exàmens amb el seu propi codi.
+        campCodi.classList.toggle('panell-amagat', rol !== 'admin');
+        document.getElementById('cfg-codi').required = rol === 'admin';
+
+        actualitzaModeEdicio_();
+        configError.textContent = '';
+        configError.classList.remove('ok');
+        mostraPanell_(configFormulari);
+      }
+
+      function actualitzaModeEdicio_() {
+        campEnllac.classList.toggle('panell-amagat', !editantId);
+        zonaEdicio.classList.toggle('panell-amagat', !editantId);
+        if (editantId) inputEnllac.value = enllacAlumnat_(editantId);
+      }
+
+      document.getElementById('btn-copiar-enllac').addEventListener('click', function () {
+        copia_(inputEnllac.value, function (ok) {
+          if (!ok) inputEnllac.select();
+          configError.classList.toggle('ok', ok);
+          configError.textContent = ok ? 'Enllaç copiat.' : "Copia l'enllaç manualment.";
+        });
+      });
+
+      document.getElementById('btn-config-tornar').addEventListener('click', function () {
+        renderitzaLlistaExamens_();
+        mostraPanell_(configLlista);
+      });
+
       configFormulari.addEventListener('submit', function (ev) {
         ev.preventDefault();
-        btnConfigGuardar.disabled = true;
         configError.textContent = '';
         configError.classList.remove('ok');
 
+        var formsUrl = document.getElementById('cfg-forms').value.trim();
+        if (formsUrl && !FORMS_REGEX.test(formsUrl)) {
+          configError.textContent = "L'enllaç ha de ser d'un Google Forms (https://docs.google.com/forms/...).";
+          return;
+        }
+
         var fields = {
+          modul: document.getElementById('cfg-modul').value.trim(),
+          classe: document.getElementById('cfg-classe').value.trim(),
+          professor: document.getElementById('cfg-professor').value.trim(),
           titol: document.getElementById('cfg-titol').value.trim(),
           descripcio: document.getElementById('cfg-descripcio').value,
           normes: document.getElementById('cfg-normes').value,
           avisosMax: Number(document.getElementById('cfg-avisos').value) || 0,
           tempsMinuts: Number(document.getElementById('cfg-temps').value) || 0,
-          formsUrl: document.getElementById('cfg-forms').value.trim(),
+          formsUrl: formsUrl,
           estat: document.getElementById('cfg-estat').value
         };
+        if (!editantId) fields.id = inputId.value.trim();
+        if (rol === 'admin') fields.codi = document.getElementById('cfg-codi').value.trim();
 
-        fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'configSave', codi: teacherCode, fields: fields })
-        })
-          .then(function (res) { return res.json(); })
+        btnConfigGuardar.disabled = true;
+        postApi_({ action: 'examSave', codi: teacherCode, examen: editantId, nou: !editantId, fields: fields })
           .then(function (data) {
             btnConfigGuardar.disabled = false;
             if (data.error) {
               configError.textContent = data.missatge || "No s'ha pogut desar.";
               return;
             }
-            configError.textContent = 'Canvis desats.';
+            var desat = data.examen;
+            var idx = -1;
+            examens.forEach(function (e, i) { if (e.id === desat.id) idx = i; });
+            if (idx === -1) examens.push(desat); else examens[idx] = desat;
+
+            var eraNou = !editantId;
+            editantId = desat.id;
+            inputId.readOnly = true;
+            document.getElementById('config-form-titol').textContent = 'Editar examen';
+            actualitzaModeEdicio_();
+            configError.textContent = eraNou
+              ? "Examen creat. Copia l'enllaç per a l'alumnat i activa'l quan calgui."
+              : 'Canvis desats.';
             configError.classList.add('ok');
           })
           .catch(function () {
@@ -631,34 +908,58 @@
           });
       });
 
-      var btnZonaPerillosa = document.getElementById('btn-zona-perillosa');
-      var configResetPanell = document.getElementById('config-reset-panell');
+      document.getElementById('btn-eliminar-examen').addEventListener('click', function () {
+        if (!editantId) return;
+        var resposta = window.prompt(
+          "Això esborra l'examen i TOT el seu registre d'alumnes. No es pot desfer.\n\n" +
+          "Escriu l'ID de l'examen (" + editantId + ') per confirmar:'
+        );
+        if (resposta === null) return;
+        if (resposta.trim() !== editantId) {
+          window.alert("L'ID no coincideix. No s'ha esborrat res.");
+          return;
+        }
+        var id = editantId;
+        postApi_({ action: 'examDelete', codi: teacherCode, examen: id })
+          .then(function (data) {
+            if (data.error) {
+              configError.classList.remove('ok');
+              configError.textContent = data.missatge || "No s'ha pogut eliminar.";
+              return;
+            }
+            examens = examens.filter(function (e) { return e.id !== id; });
+            editantId = null;
+            configLlistaMsg.classList.add('ok');
+            configLlistaMsg.textContent = 'Examen "' + id + '" eliminat.';
+            renderitzaLlistaExamens_();
+            mostraPanell_(configLlista);
+          })
+          .catch(function () {
+            configError.classList.remove('ok');
+            configError.textContent = 'Error de connexió.';
+          });
+      });
+
       var llistaAlumnes = document.getElementById('llista-alumnes');
       var btnResetTots = document.getElementById('btn-reset-tots');
       var resetTotsMsg = document.getElementById('reset-tots-msg');
-      var btnResetTancar = document.getElementById('btn-reset-tancar');
 
-      btnZonaPerillosa.addEventListener('click', function () {
-        configFormulari.classList.add('panell-amagat');
-        configResetPanell.classList.remove('panell-amagat');
+      document.getElementById('btn-zona-perillosa').addEventListener('click', function () {
+        if (!editantId) return;
+        document.getElementById('reset-examen-nom').textContent = 'Examen: ' + editantId;
         resetTotsMsg.textContent = '';
         resetTotsMsg.classList.remove('ok');
+        mostraPanell_(configResetPanell);
         carregaLlistaAlumnes_();
       });
 
-      btnResetTancar.addEventListener('click', function () {
-        configResetPanell.classList.add('panell-amagat');
-        configFormulari.classList.remove('panell-amagat');
+      document.getElementById('btn-reset-tancar').addEventListener('click', function () {
+        mostraPanell_(configFormulari);
       });
 
       function carregaLlistaAlumnes_() {
         llistaAlumnes.textContent = 'Carregant...';
-        fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'configListStudents', codi: teacherCode })
-        })
-          .then(function (res) { return res.json(); })
+        postApi_({ action: 'configListStudents', codi: teacherCode, examen: editantId })
           .then(function (data) {
             if (data.error) {
               llistaAlumnes.textContent = data.missatge || "No s'ha pogut carregar la llista.";
@@ -724,12 +1025,7 @@
         );
         if (!confirmat) return;
 
-        fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'configResetStudent', codi: teacherCode, correu: correu })
-        })
-          .then(function (res) { return res.json(); })
+        postApi_({ action: 'configResetStudent', codi: teacherCode, examen: editantId, correu: correu })
           .then(function (data) {
             if (data.error) {
               window.alert(data.missatge || "No s'ha pogut reiniciar aquest alumne.");
@@ -745,8 +1041,9 @@
 
       btnResetTots.addEventListener('click', function () {
         var confirmat = window.confirm(
-          "Segur que vols reiniciar TOTS els alumnes? S'esborraran tots els noms, avisos i historials " +
-          "de la pestanya Registre, com si l'examen no s'hagués fet mai. Aquesta acció no es pot desfer."
+          "Segur que vols reiniciar TOTS els alumnes de l'examen " + editantId + "? S'esborraran tots els " +
+          "noms, avisos i historials del seu registre, com si no s'hagués fet mai. Els altres exàmens no " +
+          "es toquen. Aquesta acció no es pot desfer."
         );
         if (!confirmat) return;
 
@@ -754,19 +1051,14 @@
         resetTotsMsg.textContent = '';
         resetTotsMsg.classList.remove('ok');
 
-        fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'configReset', codi: teacherCode })
-        })
-          .then(function (res) { return res.json(); })
+        postApi_({ action: 'configReset', codi: teacherCode, examen: editantId })
           .then(function (data) {
             btnResetTots.disabled = false;
             if (data.error) {
               resetTotsMsg.textContent = data.missatge || "No s'ha pogut reiniciar.";
               return;
             }
-            resetTotsMsg.textContent = 'Tots els registres esborrats.';
+            resetTotsMsg.textContent = 'Tots els registres d\'aquest examen esborrats.';
             resetTotsMsg.classList.add('ok');
             renderitzaLlistaAlumnes_([]);
           })
@@ -906,7 +1198,7 @@
     }
 
     function enviarAvis_(motiu) {
-      var payload = JSON.stringify({ action: 'warning', token: token, reason: motiu });
+      var payload = JSON.stringify({ action: 'warning', examen: examenId, token: token, reason: motiu });
       if (navigator.sendBeacon && navigator.sendBeacon(API_URL, payload)) return;
       fetch(API_URL, {
         method: 'POST',
@@ -917,7 +1209,7 @@
     }
 
     function enviarEstat_(accio, estat) {
-      var payload = JSON.stringify({ action: accio, token: token, status: estat });
+      var payload = JSON.stringify({ action: accio, examen: examenId, token: token, status: estat });
       if (navigator.sendBeacon && navigator.sendBeacon(API_URL, payload)) return;
       fetch(API_URL, {
         method: 'POST',
