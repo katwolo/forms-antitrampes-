@@ -214,7 +214,11 @@ ignora y se usa la API por defecto.
 ## Cómo funciona el flujo
 
 - `index.html` lee el ID del examen de la URL (`?examen=<ID>`). Si falta,
-  muestra "Enllaç incomplet"; si no existe, "Examen no trobat".
+  muestra la **portada**: explica qué es la página y tiene dos tarjetas,
+  una para el alumnado (pasos + campo "Codi de l'examen", que lleva a
+  `?examen=<codi>`) y otra para el profesorado (pasos + botón "Entrar al
+  panell", que abre el panel ⚙️). Si el ID no existe, muestra "Examen no
+  trobat" con un botón "Tornar a l'inici".
 - Hace `GET` a `API_URL?examen=<ID>` para obtener el título, descripción,
   normas, avisos máximos, tiempo y estado de ese examen (JSON).
 - Si el `Estat` del examen no es `ACTIU`, muestra "examen no disponible" y
@@ -322,8 +326,10 @@ la detección en móvil sea fiable.
    acabado el tiempo (y salir de pantalla completa).
 8. Rellena y envía el propio Forms embebido → debe mostrar "Examen enviat"
    y salir de pantalla completa, sin seguir contando avisos.
-9. Abre la página sin `?examen=` → debe mostrar "Enllaç incomplet"; con un
-   ID inexistente → "Examen no trobat".
+9. Abre la página sin `?examen=` → debe mostrar la portada; escribe el ID
+   de tu examen en "Codi de l'examen" → debe abrir ese examen; con un ID
+   inexistente → "Examen no trobat" y "Tornar a l'inici" vuelve a la
+   portada. "Entrar al panell" debe abrir el panel ⚙️.
 10. Prueba el icono ⚙️: un código incorrecto debe rechazarse; con el código
     de un profesor solo deben verse sus exámenes; con el de administrador,
     todos. Guarda un cambio y comprueba que se refleja en `Examens`.
