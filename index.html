@@ -25,8 +25,8 @@
   html, body {
     margin: 0;
     padding: 0;
-    height: 100%;
-    background: radial-gradient(circle at top, var(--bg-2), var(--bg-1));
+    min-height: 100%;
+    background: var(--bg-1) radial-gradient(circle at top, var(--bg-2), var(--bg-1)) no-repeat;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -274,11 +274,137 @@
     font-weight: 600;
   }
   #forms-frame { flex: 1; border: none; width: 100%; background: #fff; }
+
+  /* Portada: es mostra quan s'entra sense ?examen=. A diferència de les
+     .overlay, és contingut normal de la pàgina perquè es pugui fer scroll
+     en mòbil (les dues targetes no hi caben en una sola pantalla). */
+  #pantalla-portada {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: max(56px, env(safe-area-inset-top)) 16px max(40px, env(safe-area-inset-bottom));
+  }
+  .portada-capcalera { text-align: center; max-width: 640px; margin-bottom: 28px; }
+  .portada-capcalera h1 { font-size: 2rem; }
+  .portada-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 1.7rem;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+  }
+  .portada-subtitol { color: var(--text-muted); line-height: 1.55; margin: 0; }
+  .portada-targetes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+  .portada-targetes .targeta { max-width: none; max-height: none; text-align: left; display: flex; flex-direction: column; }
+  .portada-targetes .targeta h1 { font-size: 1.2rem; }
+  .portada-espai { flex: 1; }
+  .portada-etiqueta {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .etiqueta-alumnat { background: rgba(99, 102, 241, 0.18); color: var(--accent-hover); }
+  .etiqueta-professorat { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+  .passos { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
+  .passos li { display: flex; gap: 12px; align-items: flex-start; color: var(--text-muted); line-height: 1.45; font-size: 0.93rem; }
+  .passos strong { color: var(--text); }
+  .passos .num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.18);
+    color: var(--accent-hover);
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+  .fila-codi { display: flex; gap: 8px; margin-top: 20px; }
+  .fila-codi input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: rgba(15, 23, 42, 0.6);
+    color: var(--text);
+  }
+  .fila-codi input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25); }
+  .fila-codi .btn { margin-top: 0; width: auto; white-space: nowrap; }
+  .btn-verd { background: #16a34a; }
+  .btn-verd:hover { background: #22c55e; }
+  #btn-error-inici { display: block; text-decoration: none; text-align: center; }
 </style>
 </head>
 <body>
 
   <button id="btn-config" aria-label="Configuració del professorat" title="Configuració">⚙️</button>
+
+  <main id="pantalla-portada" class="panell-amagat">
+    <div class="portada-capcalera">
+      <div class="portada-logo" aria-hidden="true">🛡️</div>
+      <h1>Examen antitrampes</h1>
+      <p class="portada-subtitol">
+        Una pàgina per fer exàmens de Google Forms en pantalla completa. Detecta si l'alumne surt de
+        l'examen, li dona avisos i el suspèn automàticament si en supera el màxim. Cada professor/a té els
+        seus exàmens, el seu formulari i el seu registre.
+      </p>
+    </div>
+
+    <div class="portada-targetes">
+      <section class="targeta">
+        <span class="portada-etiqueta etiqueta-alumnat">Alumnat</span>
+        <h1>🎓 Vaig a fer un examen</h1>
+        <ol class="passos">
+          <li><span class="num">1</span><span>Obre l'<strong>enllaç</strong> que t'ha donat el professor/a (o escriu el codi aquí sota).</span></li>
+          <li><span class="num">2</span><span>Escriu el teu <strong>nom i correu</strong> i prem "Comenzar examen".</span></li>
+          <li><span class="num">3</span><span>No surtis de <strong>pantalla completa</strong> ni canviïs de pestanya fins que enviïs el formulari.</span></li>
+        </ol>
+        <div class="portada-espai"></div>
+        <form id="form-codi-examen" class="fila-codi">
+          <input type="text" id="input-codi-examen" placeholder="Codi de l'examen" aria-label="Codi de l'examen"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <button type="submit" class="btn">Entrar</button>
+        </form>
+        <div id="error-codi-examen" class="camp-error"></div>
+      </section>
+
+      <section class="targeta">
+        <span class="portada-etiqueta etiqueta-professorat">Professorat</span>
+        <h1>🧑‍🏫 Vull crear un examen</h1>
+        <ol class="passos">
+          <li><span class="num">1</span><span>Entra al <strong>panell</strong> amb el teu codi de professor/a.</span></li>
+          <li><span class="num">2</span><span>Crea un examen: enganxa l'enllaç del teu <strong>Google Forms</strong>, posa el temps i els avisos.</span></li>
+          <li><span class="num">3</span><span>Activa'l i <strong>copia l'enllaç</strong> per passar-lo a l'alumnat. Des del panell veuràs els avisos de cadascú.</span></li>
+        </ol>
+        <div class="portada-espai"></div>
+        <button type="button" class="btn btn-verd" id="btn-portada-panell">⚙️ Entrar al panell</button>
+      </section>
+    </div>
+  </main>
 
   <div id="pantalla-carrega" class="overlay">
     <div class="targeta">
@@ -359,6 +485,7 @@
       <div class="icona">❌</div>
       <h1 id="error-titol">Error</h1>
       <p id="error-missatge"></p>
+      <a class="btn btn-secundari" id="btn-error-inici" href="./">Tornar a l'inici</a>
     </div>
   </div>
 
@@ -539,11 +666,17 @@
       return url;
     }
 
+    // Des de qualsevol pantalla d'error es pot tornar a la portada.
+    document.getElementById('btn-error-inici').href = enllacPortada_();
+
+    function enllacPortada_() {
+      var url = window.location.origin + window.location.pathname;
+      if (apiOverride) url += '?api=' + encodeURIComponent(apiOverride);
+      return url;
+    }
+
     if (!examenId) {
-      mostraError(
-        'Enllaç incomplet',
-        "A aquest enllaç li falta l'identificador de l'examen. Demana l'enllaç correcte al professor/a."
-      );
+      mostraPortada_();
     } else {
       fetch(API_URL + '?examen=' + encodeURIComponent(examenId))
         .then(function (res) { return res.json(); })
@@ -1170,6 +1303,44 @@
       document.getElementById('error-titol').textContent = titol;
       document.getElementById('error-missatge').textContent = missatge;
       overlayError.classList.remove('amagat');
+    }
+
+    /**
+     * Portada per a qui entra sense ?examen=: explica què és la pàgina, deixa
+     * escriure el codi de l'examen (porta a ?examen=<codi>) i dona accés al
+     * panell del professorat.
+     */
+    function mostraPortada_() {
+      pantallaCarrega.classList.add('amagat');
+      document.getElementById('pantalla-portada').classList.remove('panell-amagat');
+      document.title = 'Examen antitrampes';
+
+      var inputCodiExamen = document.getElementById('input-codi-examen');
+      var errorCodiExamen = document.getElementById('error-codi-examen');
+
+      document.getElementById('form-codi-examen').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var codi = inputCodiExamen.value.trim();
+        if (!codi) {
+          errorCodiExamen.textContent = "Escriu el codi de l'examen que t'ha donat el professor/a.";
+          inputCodiExamen.focus();
+          return;
+        }
+        if (!/^[A-Za-z0-9_-]{1,40}$/.test(codi)) {
+          errorCodiExamen.textContent = 'El codi només té lletres, números, guions (-) i guions baixos (_).';
+          inputCodiExamen.focus();
+          return;
+        }
+        window.location.href = enllacAlumnat_(codi);
+      });
+
+      inputCodiExamen.addEventListener('input', function () {
+        errorCodiExamen.textContent = '';
+      });
+
+      document.getElementById('btn-portada-panell').addEventListener('click', function () {
+        btnConfig.click();
+      });
     }
 
     /**
