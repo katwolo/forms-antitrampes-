@@ -357,6 +357,57 @@
   .btn-verd { background: #16a34a; }
   .btn-verd:hover { background: #22c55e; }
   #btn-error-inici { display: block; text-decoration: none; text-align: center; }
+
+  .capcalera-panell { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 20px 0 8px; }
+  .capcalera-panell h2 { margin: 0; }
+  .btn-ajuda {
+    flex-shrink: 0;
+    padding: 5px 11px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--accent-hover);
+    cursor: pointer;
+  }
+  .btn-ajuda:hover { background: rgba(99, 102, 241, 0.25); color: var(--text); }
+
+  /* Tutorial guiat del panell. El "forat" que ressalta cada camp és
+     #tutorial-focus: la seva box-shadow enorme enfosqueix la resta de la
+     pantalla. #tutorial-capa és transparent però captura els clics perquè
+     no es toqui el formulari mentre dura el tutorial. */
+  #tutorial-capa { position: fixed; inset: 0; z-index: 1200; }
+  #tutorial.sense-objectiu #tutorial-capa { background: rgba(2, 6, 23, 0.72); }
+  #tutorial-focus {
+    position: fixed;
+    z-index: 1201;
+    pointer-events: none;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72);
+    outline: 2px solid var(--accent-hover);
+    outline-offset: 2px;
+    transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+  }
+  #tutorial.sense-objectiu #tutorial-focus { display: none; }
+  #tutorial-globus {
+    position: fixed;
+    z-index: 1202;
+    width: min(360px, calc(100vw - 32px));
+    background: #1e293b;
+    border: 1px solid rgba(129, 140, 248, 0.45);
+    border-radius: 14px;
+    padding: 16px 18px 14px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    color: var(--text);
+  }
+  #tutorial-comptador { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-hover); }
+  #tutorial-titol { margin: 4px 0 6px; font-size: 1.02rem; }
+  #tutorial-text { margin: 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; white-space: pre-line; }
+  .tutorial-botons { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .tutorial-espai { flex: 1; }
+  .tutorial-saltar { background: none; border: none; padding: 4px 0; color: var(--text-muted); font-size: 0.82rem; cursor: pointer; text-decoration: underline; }
+  .tutorial-saltar:hover { color: var(--text); }
 </style>
 </head>
 <body>
@@ -505,7 +556,10 @@
 
       <div id="config-llista" class="panell-amagat">
         <p class="descripcio" id="config-rol"></p>
-        <h2>Exàmens</h2>
+        <div class="capcalera-panell">
+          <h2>Exàmens</h2>
+          <button type="button" class="btn-ajuda" id="btn-tutorial-llista">❓ Tutorial</button>
+        </div>
         <div id="llista-examens" class="llista-files"></div>
         <div id="config-llista-msg" class="camp-error"></div>
         <button type="button" class="btn" id="btn-nou-examen">➕ Nou examen</button>
@@ -513,7 +567,10 @@
       </div>
 
       <form id="config-formulari" class="panell-amagat">
-        <h2 id="config-form-titol">Examen</h2>
+        <div class="capcalera-panell">
+          <h2 id="config-form-titol">Examen</h2>
+          <button type="button" class="btn-ajuda" id="btn-tutorial-formulari">❓ Tutorial</button>
+        </div>
         <div class="camp">
           <label for="cfg-id">ID de l'examen (apareix a l'enllaç; no es pot canviar després)</label>
           <input type="text" id="cfg-id" pattern="[A-Za-z0-9_\-]{1,40}" placeholder="p. ex. DAW1-M06-UF2" required>
@@ -597,6 +654,22 @@
       </div>
     </div>
   </div>
+  </div>
+
+  <div id="tutorial" class="panell-amagat" role="dialog" aria-modal="true" aria-labelledby="tutorial-titol">
+    <div id="tutorial-capa"></div>
+    <div id="tutorial-focus"></div>
+    <div id="tutorial-globus">
+      <div id="tutorial-comptador"></div>
+      <h3 id="tutorial-titol"></h3>
+      <p id="tutorial-text"></p>
+      <div class="tutorial-botons">
+        <button type="button" class="tutorial-saltar" id="tutorial-saltar">Saltar tutorial</button>
+        <span class="tutorial-espai"></span>
+        <button type="button" class="btn btn-secundari btn-mini" id="tutorial-anterior">Anterior</button>
+        <button type="button" class="btn btn-mini" id="tutorial-seguent">Següent</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -794,6 +867,173 @@
         codi: 'cfg-codi'
       };
 
+      var tutorial = creaTutorial_();
+      var TUTORIAL_LLISTA = 'llista.v1';
+      var TUTORIAL_FORMULARI = 'formulari.v1';
+
+      function primerBotoLlista_(n) {
+        return function () {
+          var fila = llistaExamens.querySelector('.alumne-fila');
+          return fila ? fila.querySelectorAll('.examen-botons .btn')[n] : null;
+        };
+      }
+
+      function passosLlista_() {
+        return [
+          {
+            titol: '👋 Benvingut/da al panell',
+            text: "T'expliquem en un minut com funciona.\n\nPots saltar el tutorial quan vulguis i tornar-lo a veure " +
+              'més endavant amb el botó ❓ Tutorial.'
+          },
+          {
+            titol: 'Els teus exàmens',
+            objectiu: '#llista-examens',
+            text: "Aquí surten els exàmens que pots gestionar. De cadascun veus el títol, l'ID, el mòdul i la classe, i " +
+              "l'estat: ● ACTIU (l'alumnat hi pot entrar) o ○ INACTIU (encara no)."
+          },
+          {
+            titol: 'Editar',
+            objectiu: primerBotoLlista_(0),
+            text: "Obre la configuració de l'examen: textos, temps, avisos, enllaç del Forms, estat i la llista " +
+              "d'alumnes amb els seus avisos."
+          },
+          {
+            titol: 'Copiar enllaç',
+            objectiu: primerBotoLlista_(1),
+            text: "Copia l'enllaç que has de passar a l'alumnat (acaba en ?examen=ID). Enganxa'l al Classroom o al " +
+              'document de la classe.'
+          },
+          {
+            titol: 'Nou examen',
+            objectiu: '#btn-nou-examen',
+            text: 'Crea un examen nou. Cada examen té el seu propi Google Forms, la seva configuració i el seu propi ' +
+              "registre d'alumnes."
+          },
+          {
+            titol: 'Tornar a veure el tutorial',
+            objectiu: '#btn-tutorial-llista',
+            text: "Aquest tutorial no tornarà a sortir sol. Si el vols tornar a veure, prem aquest botó."
+          }
+        ];
+      }
+
+      function campDe_(id) {
+        return function () {
+          var el = document.getElementById(id);
+          return el ? el.closest('.camp') : null;
+        };
+      }
+
+      function passosFormulari_() {
+        return [
+          {
+            titol: '📝 Configurar un examen',
+            text: function () {
+              return (editantId
+                ? "Aquí canvies la configuració d'aquest examen."
+                : 'Aquí crees un examen nou.') +
+                ' Et passem per cada camp perquè sàpigues què fa.\n\nPots saltar-ho quan vulguis.';
+            }
+          },
+          {
+            titol: "ID de l'examen",
+            objectiu: campDe_('cfg-id'),
+            text: 'Codi curt i únic, p. ex. DAW1-M06-UF2. Només lletres sense accents, números, guions (-) i guions ' +
+              "baixos (_).\n\nForma part de l'enllaç de l'alumnat, per això no es pot canviar un cop creat l'examen."
+          },
+          {
+            titol: 'Mòdul, classe i professor/a',
+            objectiu: [campDe_('cfg-modul'), campDe_('cfg-classe'), campDe_('cfg-professor')],
+            text: 'Són informatius: serveixen per reconèixer i ordenar els exàmens a la llista del panell. ' +
+              "L'alumnat no els veu."
+          },
+          {
+            titol: 'Títol',
+            objectiu: campDe_('cfg-titol'),
+            text: "El que veu l'alumne a dalt de tot abans de començar. També és el nom de la pestanya del navegador."
+          },
+          {
+            titol: 'Descripció',
+            objectiu: campDe_('cfg-descripcio'),
+            text: "Text breu sota el títol: de què és l'examen, quin material es pot fer servir, etc."
+          },
+          {
+            titol: 'Normes',
+            objectiu: campDe_('cfg-normes'),
+            text: "Les normes que l'alumne llegeix abans de començar. Pots fer salts de línia per posar-ne una a cada línia."
+          },
+          {
+            titol: 'Avisos màxims',
+            objectiu: campDe_('cfg-avisos'),
+            text: "Cada vegada que l'alumne surt de pantalla completa, canvia de pestanya o minimitza, rep un avís. " +
+              "En arribar a aquest número, l'examen se li bloqueja (suspès).\n\nAmb 0 no se suspèn mai: els avisos " +
+              "només queden registrats."
+          },
+          {
+            titol: "Temps de l'examen",
+            objectiu: campDe_('cfg-temps'),
+            text: "Minuts que té l'alumne des que prem «Comenzar examen». L'hora d'inici la guarda el servidor: " +
+              "recarregar la pàgina no dona més temps. Quan s'acaba, se li demana que enviï el formulari."
+          },
+          {
+            titol: 'Enllaç del Google Forms',
+            objectiu: campDe_('cfg-forms'),
+            text: "Al teu Forms, prem Enviar → 🔗 i copia l'enllaç (acaba en /viewform).\n\nNo facis servir l'enllaç " +
+              "de la barra del navegador mentre l'edites (acaba en /edit): l'alumnat no el pot obrir."
+          },
+          {
+            titol: "Estat de l'examen",
+            objectiu: campDe_('cfg-estat'),
+            text: "ACTIU: l'alumnat pot entrar i començar.\nINACTIU: la pàgina diu que l'examen no està disponible.\n\n" +
+              "Consell: deixa'l INACTIU fins al moment de fer l'examen."
+          },
+          {
+            titol: 'Codi del professor/a',
+            objectiu: campDe_('cfg-codi'),
+            text: "Només el veu l'administració. És el codi amb què el professor/a d'aquest examen entra al panell.\n\n" +
+              'Fes servir el mateix codi per a tots els exàmens d\'un professor i un de diferent per a cada professor.'
+          },
+          {
+            titol: "Enllaç per a l'alumnat",
+            objectiu: '#camp-enllac',
+            text: "L'enllaç que has de passar a l'alumnat. Copia'l amb el botó i enganxa'l al Classroom o al document " +
+              'de la classe.'
+          },
+          {
+            titol: 'Desar canvis',
+            objectiu: '#btn-config-guardar',
+            text: function () {
+              return editantId
+                ? 'Res no es guarda fins que prems aquí. Els canvis es veuen a la pàgina de l\'alumnat al moment.'
+                : "Crea l'examen. Un cop creat, aquí mateix apareixerà l'enllaç per passar a l'alumnat.";
+            }
+          },
+          {
+            titol: 'Zona perillosa',
+            objectiu: '#btn-zona-perillosa',
+            text: "Mostra els alumnes que han començat l'examen amb els seus avisos. Des d'aquí en pots reiniciar un " +
+              "(p. ex. si l'han suspès per error) perquè torni a començar de zero, o reiniciar-los tots."
+          },
+          {
+            titol: 'Eliminar examen',
+            objectiu: '#btn-eliminar-examen',
+            text: "Esborra l'examen i tot el seu registre d'alumnes. No es pot desfer: et demanarà escriure l'ID per confirmar."
+          },
+          {
+            titol: 'Tornar a veure el tutorial',
+            objectiu: '#btn-tutorial-formulari',
+            text: 'Aquest tutorial no tornarà a sortir sol. Si el vols tornar a veure, prem aquest botó.'
+          }
+        ];
+      }
+
+      document.getElementById('btn-tutorial-llista').addEventListener('click', function () {
+        tutorial.inicia(TUTORIAL_LLISTA, passosLlista_());
+      });
+      document.getElementById('btn-tutorial-formulari').addEventListener('click', function () {
+        tutorial.inicia(TUTORIAL_FORMULARI, passosFormulari_());
+      });
+
       function mostraPanell_(panell) {
         [configLogin, configLlista, configFormulari, configResetPanell].forEach(function (p) {
           p.classList.toggle('panell-amagat', p !== panell);
@@ -849,6 +1089,7 @@
             configLlistaMsg.textContent = '';
             renderitzaLlistaExamens_();
             mostraPanell_(configLlista);
+            tutorial.iniciaSiCal(TUTORIAL_LLISTA, passosLlista_());
           })
           .catch(function () {
             btnConfigEntrar.disabled = false;
@@ -965,6 +1206,7 @@
         configError.textContent = '';
         configError.classList.remove('ok');
         mostraPanell_(configFormulari);
+        tutorial.iniciaSiCal(TUTORIAL_FORMULARI, passosFormulari_());
       }
 
       function actualitzaModeEdicio_() {
@@ -1303,6 +1545,185 @@
       document.getElementById('error-titol').textContent = titol;
       document.getElementById('error-missatge').textContent = missatge;
       overlayError.classList.remove('amagat');
+    }
+
+    /**
+     * Tutorial guiat (sense llibreries): ressalta un element, mostra una
+     * bafarada amb l'explicació i deixa avançar, tornar enrere o saltar.
+     * Cada tutorial té una clau: quan s'acaba o se salta, es guarda al
+     * navegador (localStorage) i no torna a sortir sol. Es pot tornar a
+     * veure amb els botons "❓ Tutorial".
+     *
+     * Un pas és { titol, text, objectiu }. "objectiu" és un selector, una
+     * funció que torna un element, o una llista d'aquests (es ressalta el
+     * rectangle que els engloba). Els passos amb objectiu invisible (p. ex.
+     * camps que només veu l'admin) se salten sols; sense objectiu, la
+     * bafarada surt centrada.
+     */
+    function creaTutorial_() {
+      var arrel = document.getElementById('tutorial');
+      var focus = document.getElementById('tutorial-focus');
+      var globus = document.getElementById('tutorial-globus');
+      var comptador = document.getElementById('tutorial-comptador');
+      var titol = document.getElementById('tutorial-titol');
+      var text = document.getElementById('tutorial-text');
+      var btnAnterior = document.getElementById('tutorial-anterior');
+      var btnSeguent = document.getElementById('tutorial-seguent');
+      var btnSaltar = document.getElementById('tutorial-saltar');
+
+      var PREFIX = 'antitrampes.tutorial.';
+      var vistosEnMemoria = {}; // per si el navegador no deixa fer servir localStorage
+      var passos = [];
+      var index = 0;
+      var clauActual = null;
+      var actiu = false;
+
+      function vist(clau) {
+        if (vistosEnMemoria[clau]) return true;
+        try {
+          return window.localStorage.getItem(PREFIX + clau) === '1';
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function marcaVist_(clau) {
+        vistosEnMemoria[clau] = true;
+        try {
+          window.localStorage.setItem(PREFIX + clau, '1');
+        } catch (e) {}
+      }
+
+      function esVisible_(el) {
+        return !!el && el.getClientRects().length > 0;
+      }
+
+      function elementsDe_(pas) {
+        if (!pas.objectiu) return [];
+        return [].concat(pas.objectiu)
+          .map(function (o) { return typeof o === 'function' ? o() : document.querySelector(o); })
+          .filter(esVisible_);
+      }
+
+      function inicia(clau, nousPassos) {
+        // Es filtra en començar: els passos sense element visible no compten.
+        passos = nousPassos.filter(function (p) { return !p.objectiu || elementsDe_(p).length; });
+        if (!passos.length) return;
+        clauActual = clau;
+        index = 0;
+        actiu = true;
+        arrel.classList.remove('panell-amagat');
+        mostraPas_();
+      }
+
+      function iniciaSiCal(clau, nousPassos) {
+        if (!vist(clau)) inicia(clau, nousPassos);
+      }
+
+      function acaba_() {
+        actiu = false;
+        arrel.classList.add('panell-amagat');
+        if (clauActual) marcaVist_(clauActual);
+        clauActual = null;
+      }
+
+      function mostraPas_() {
+        var pas = passos[index];
+        comptador.textContent = 'Pas ' + (index + 1) + ' de ' + passos.length;
+        titol.textContent = pas.titol;
+        text.textContent = typeof pas.text === 'function' ? pas.text() : pas.text;
+        btnAnterior.classList.toggle('panell-amagat', index === 0);
+        btnSeguent.textContent = index === passos.length - 1 ? 'Entesos!' : 'Següent';
+
+        var els = elementsDe_(pas);
+        if (els.length) els[0].scrollIntoView({ block: 'center', behavior: 'auto' });
+        posiciona_();
+        btnSeguent.focus({ preventScroll: true });
+      }
+
+      function posiciona_() {
+        if (!actiu) return;
+        var els = elementsDe_(passos[index]);
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var marge = 16;
+        var gw = globus.offsetWidth;
+        var gh = globus.offsetHeight;
+
+        if (!els.length) {
+          arrel.classList.add('sense-objectiu');
+          globus.style.left = Math.max(marge, (vw - gw) / 2) + 'px';
+          globus.style.top = Math.max(marge, (vh - gh) / 2) + 'px';
+          return;
+        }
+        arrel.classList.remove('sense-objectiu');
+
+        var r = els.reduce(function (acc, el) {
+          var b = el.getBoundingClientRect();
+          return {
+            top: Math.min(acc.top, b.top),
+            left: Math.min(acc.left, b.left),
+            bottom: Math.max(acc.bottom, b.bottom),
+            right: Math.max(acc.right, b.right)
+          };
+        }, { top: Infinity, left: Infinity, bottom: -Infinity, right: -Infinity });
+
+        var pad = 6;
+        focus.style.top = (r.top - pad) + 'px';
+        focus.style.left = (r.left - pad) + 'px';
+        focus.style.width = (r.right - r.left + pad * 2) + 'px';
+        focus.style.height = (r.bottom - r.top + pad * 2) + 'px';
+
+        // La bafarada va a sota si hi cap, si no a sobre; si l'element és
+        // tan alt que no cap enlloc, es queda a baix de tot de la pantalla.
+        var top;
+        if (r.bottom + pad + 12 + gh <= vh - marge) {
+          top = r.bottom + pad + 12;
+        } else if (r.top - pad - 12 - gh >= marge) {
+          top = r.top - pad - 12 - gh;
+        } else {
+          top = vh - gh - marge;
+        }
+        var left = Math.min(Math.max(marge, r.left), vw - gw - marge);
+        globus.style.top = Math.max(marge, top) + 'px';
+        globus.style.left = Math.max(marge, left) + 'px';
+      }
+
+      btnSeguent.addEventListener('click', function () {
+        if (index < passos.length - 1) {
+          index += 1;
+          mostraPas_();
+        } else {
+          acaba_();
+        }
+      });
+      btnAnterior.addEventListener('click', function () {
+        if (index > 0) {
+          index -= 1;
+          mostraPas_();
+        }
+      });
+      btnSaltar.addEventListener('click', acaba_);
+
+      document.addEventListener('keydown', function (ev) {
+        if (!actiu) return;
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          acaba_();
+        } else if (ev.key === 'ArrowRight') {
+          ev.preventDefault();
+          btnSeguent.click();
+        } else if (ev.key === 'ArrowLeft') {
+          ev.preventDefault();
+          btnAnterior.click();
+        }
+      }, true);
+
+      window.addEventListener('resize', posiciona_);
+      document.addEventListener('scroll', posiciona_, true);
+
+      return { inicia: inicia, iniciaSiCal: iniciaSiCal, vist: vist };
     }
 
     /**

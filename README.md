@@ -286,6 +286,29 @@ registro; pide escribir el ID para confirmar.
 
 Todas estas acciones piden confirmación porque no se pueden deshacer.
 
+#### Tutorial guiado
+
+La primera vez que un profesor entra al panel aparece un tutorial paso a
+paso que va resaltando cada parte, con una explicación de para qué sirve:
+
+- **Lista de exámenes** (al entrar): la lista, *Editar*, *Copiar enllaç*
+  y *Nou examen*.
+- **Formulario de un examen** (al crear o editar el primero): cada campo
+  (ID, módulo/clase/profesor, título, descripción, normas, avisos, tiempo,
+  enlace del Forms, estado, código del profesor si eres administrador,
+  enlace del alumnado), *Desar canvis*, la zona peligrosa y *Eliminar*.
+
+Solo se muestran los pasos de lo que esa persona ve: el código del profesor
+solo sale al administrador, y el enlace, la zona peligrosa y *Eliminar*
+solo al editar un examen ya creado. Se avanza con *Següent* / *Anterior*
+(o las flechas ← →) y se puede cerrar con *Saltar tutorial* (o Esc).
+
+Al terminarlo o saltarlo ya no vuelve a salir solo; se puede repetir en
+cualquier momento con el botón **❓ Tutorial** de la lista o del
+formulario. Que ya se ha visto se guarda **en el navegador**
+(`localStorage`), así que en otro ordenador o navegador, o tras borrar los
+datos de navegación, volverá a aparecer una vez.
+
 ### Nota técnica sobre CORS
 
 `index.html` y la API de Apps Script viven en dominios distintos, así que
